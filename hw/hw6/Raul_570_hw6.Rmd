@@ -1,0 +1,294 @@
+---
+title: "Homework 6"
+author: "Raul Torres Aragon"
+date: "11/01/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(MASS)
+options(scipen=999)
+load("hw6_objects.RData")
+```  
+
+## 1.  
+
+Table 1 reproduce data from Altham (1991) of counts of T4 cells/mm3 in blood samples from 20 patients 
+in remission from Hodgkin’s disease and 20 other patients in remission from disseminated malignancies. 
+The question of interest here is: Is there a difference in the distribution of cell counts between the two diseases? 
+A quantitative assessment of any difference is also required.  
+
+
+## (a)  
+Carry out an exploratory data analysis and provide a summary of the two distributions.  
+
+The following boxplots show the distribution of count of cells by disease. 
+Min, max, and means are displayed on the figure. Notice that individuals with Hodgkin's show 
+a higher mean count of cells on min, mean, max. On the surface it may seem like this difference 
+is statistically significant, but it could very well be driven by the outlier at 2,415.  
+
+
+```{r, echo=FALSE}
+boxplot(data.frame("Non_Hodgkins" = nh, "Hodgkins" = ho),
+        main = "Cell counts\n between two diseases",
+        horizontal = TRUE)
+text(c(mean(nh), min(nh), max(nh), min(ho), max(ho), mean(ho)),  
+     c(rep(0.8,3), rep(1.8,3)),
+     c(mean(nh), min(nh), max(nh), min(ho), max(ho), mean(ho)), 
+     pos = 1, cex = 0.6
+     )  
+points(means, c(1,2), col="red",pch=1, cex=2)
+```  
+
+## (b)  
+We now obtain 90% confidence intervals for differences of means between distributions on 
+the original scale, log transformed, and square root transformed.  
+
+Recall the equation for a 90% confidence interval for a difference in means is:  
+
+$$
+\bigg((\mu_{1}-\mu_2) -\Phi(.05) \sqrt{\frac{\sigma^2_{1}}{n_1}+\frac{\sigma^2_{2}}{n_2}},
+(\mu_{1}-\mu_2) -\Phi(.05) \sqrt{\frac{\sigma^2_{1}}{n_1}+\frac{\sigma^2_{2}}{n_2}}\bigg)
+$$  
+we obtain the variance (after applying the transformation) of each group count via bootstrap, 
+making sure the sampling is separate for the Hodgkin's and the Non Hodgkin's groups.  
+
+The resulting confifence intervals are:  
+
+* original scale: (`r round(CI_orig, 2)`)  
+* log scale: (`r round(CI_log, 2)`)  
+* sqrt scale: (`r round(CI_sqrt, 2)`)  
+
+The considerations have to do with our belief of unequal variance in the data. For example, 
+the log transform can ameliorate heteroscedasticity. If we don't believe heterscedasticity is 
+present in our sample, then we can just assume homoscedasticity and proceed with the original 
+scale.  
+
+## (c)  
+We want to know whether the means across the two groups are different. To test that with 
+different models, we first pull the data to create one dependent variable with all counts. 
+Then, we create a dummy variable to distinguish counts from Hodgkin's patients and non Hodgkin's 
+patients. Finally, we fit three models: (1) poisson, (2) Gamma, and (3) inverse Gaussian, using 
+their respective canonical forms: $X\beta = log(\mu)$, $X\beta = -\mu^{-1}$, and 
+$X\beta = \frac{1}{\mu^2}$.  
+
+Here are the results in their respective link scale, and then in the original scale:  
+
+```{r, echo=FALSE}
+knitr::kable(res_tab, 
+             caption = "Results of three models for count of cells by whether patient has Hodgekins. (link scale)",
+             digits = 4) 
+```  
+
+We now present the same results but "undoing" the link function to recover the original scale.  
+In other words,  
+For Poisson, we exponentiate the coefficients because $\exp(X\beta) = \mu$  
+For Gamma, we take the negative inverse because $-\frac{1}{X\beta} = \mu$  
+For inverse Gaussian we take the positive squared inverse because $\frac{1}{\sqrt{X\beta}} = \mu$.  
+
+
+
+```{r, echo=FALSE}
+knitr::kable(res_tab_undone, 
+             caption = "Results of three models for count of cells by whether patient has Hodgekins. (original scale)",
+             digits = 4) 
+```  
+  
+Recall that the intercept houses the mean count for those without Hodgkin. $\beta_1$ is the 
+difference in cell count between those with Hodgkin's and those without it. Thus, testing whether $\beta_1 = 0$ 
+is synonymous with testing whether there is a statistically significant difference in mean counts. Hence:  
+$H_0: \beta_1 = 0$ while $H_1: \beta_1 \neq 0$.    
+
+## (d)  
+
+Using the asymptotic distribution of the MLE, that is  
+
+$$
+\mathcal{I}(\hat{\beta})^{1/2}(\hat{\beta} - \beta) \to_d \text{N}_2(0,I_2)
+$$  
+we give 90% confidence intervals for each parameter under each of the distributional assumptions. (Poison imposes a log distribution, Gamma imposes a negative inverse, and Inverse Gaussian imposes a squared inverse.  
+
+Recall, the information matrix is obtain from `glm` by `solve(vcov(model))`. 
+It's then easy to construct asymptotic confidence intervals with as follows:  
+
+$$
+\beta_i \pm \Phi(0.95)\times \sqrt{I_{i,i}^{-1}}
+$$  
+
+```{r, echo = FALSE}
+knitr::kable(CI_tab, caption = "90% Confidence interval for each parameter under three models")
+```
+
+Based on the above results, I would conclude that, under Poisson model, there is a 
+significant difference between the mean count of cells among patients with and without Hodgkin's.  
+However, under the Gamma and the Inverse Gaussian model, I would not be so quick to do so given that 
+zero is encompassed by the confidence intervals.  
+
+
+## 2.  
+The data in Table 2, taken from Wakefield et al. (1994), were collected following the 
+administration of a single 30mg dose of the drug Cadralazine to a cardiac failure patient. 
+The response $y_i$ represents the drug concentration at time $x_i$. 
+The most straightforward model for these data is 
+$$
+log(y_i) = \mu(\beta) + \epsilon_i = log\bigg[\frac{30}{V}\exp(-k_ex_i)\bigg] + \epsilon_i
+$$  
+```{r, echo=FALSE}
+knitr::kable(data.frame(x,y))
+```
+
+## (a)  
+
+We now obtain expressions for  
+i) Log-likelihood function:  
+
+Note that we assume $log(y_i) \sim Normal \implies y_i \sim logNormal$, thus we start with the 
+lognormal distribution and compute the loglikelihood function from there. 
+
+$$
+l(\boldsymbol{\beta}, \sigma^2) = 
+-\frac{n}{2} log(2\pi\sigma^2) - \sum_i^n log(y_i)-\frac{1}{2\sigma^2}\sum_{i=1}^n[log(y_i)-log(30/V)+K_ex_i]^2
+$$  
+
+
+ii) Score function  
+The Score function is a vector-valued function of length = 3 given $\beta_0, \beta_1$, and $\sigma^2$.  
+$$
+\mathcal{S}(\boldsymbol{\beta},\sigma^2) =  
+\bigg[\frac{\partial l}{\partial \beta_0},  
+      \frac{\partial l}{\partial \beta_1}, 
+      \frac{\partial l}{\partial \sigma_2},\bigg]
+$$  
+$$
+= \bigg[
+\frac{1}{\sigma^2}\sum_{i=1}^n log(y_i) -\frac{n\beta_0}{\sigma^2} -\frac{1}{\sigma^2}\sum_{i=1}^n \beta_1x_i, 
+\frac{1}{\sigma^2}\sum_{i=1}^n log(y_i) -\frac{1}{\sigma^2}\sum_{i=1}^n\beta_1x_i-\frac{1}{\sigma^2}\sum_{i=1}^n\beta_0x_i,
+\frac{-n}{2\sigma^2} + \frac{1}{\sigma^2}\sum_{i=1}^n(log(y_i) - \boldsymbol{x}^T\boldsymbol{\beta})^2
+\bigg]  
+$$
+
+
+where $\beta_0 = log(30/V)$, $\beta_1 = -K_e$, and $\sigma^2 = \sigma^2$.  
+
+iii) Expected information matrix $\mathcal{I}(\boldsymbol{\beta},\sigma^2)$  
+$$
+\mathcal{I}(\boldsymbol{\beta},\sigma^2) = 
+\begin{bmatrix}
+-n\sigma^2 & -\frac{1}{\sigma^2}\sum_{i=1}^nx_i & \sum_{i=1}^nlog(y_i) -n\beta_0-\sum_{i=1}^n\beta_1x_i \\
+-\frac{1}{\sigma^2}\sum_{i=1}^nx_i & -\frac{1}{\sigma^2}\sum_{i=1}^nx_i & \sum_{i=1}^n(x_ilog(y_i)+\beta_1x_i-\beta_0x_i) \\
+\sum_{i=1}^nlog(y_i) -n\beta_0-\sum_{i=1}^n\beta_1x_i  & \sum_{i=1}^n(x_ilog(y_i)+\beta_1x_i-\beta_0x_i) & \frac{n}{2(\sigma^2)^3} -\frac{\sum_{i=1}(log(y_i)-\boldsymbol{x^T\beta})^2}{2(\sigma^2)^3} \\
+\end{bmatrix}
+$$  
+
+## (b)  
+Using `optim` to numerically optimize the log-function for $V, -K_e, \sigma^2$, we get MLEs and their asymptotic 95% confidence intervals:  
+
+```{r, echo=FALSE}
+knitr::kable(Q2b_tab, caption = "MLEs for V, Ke, and sigma^2")
+```
+
+## (c)  
+We now plot the data, along with the fitted curve.  
+
+```{r, echo=FALSE}
+plot(y~x, main = "Cadralazine concentration at 8 given times", xaxt='n')
+lines(exp(b0-b1*x_grid), lty=1, lwd=3)
+axis(1,at=x,labels=x)
+```
+
+## (d)  
+Using residuals, we examine the appropriateness of the assumptions of the above model. 
+And answer the question: Does the model seem reasonable for these data?  
+
+To examine the assumption of equal variance (homoscedasticty) we plot residuals against 
+fitted values.  
+```{r, echo=FALSE}
+par(mfrow = c(1,2))
+plot(r~yhat, 
+     main = "residual-fitted plot", 
+     xlab = "time", ylab = "residual",
+     xaxt="n")
+axis(1,at=x,labels=x)
+plot(std_r~yhat,
+     main = "standardized residuals-fitted plot",
+     ylab = "std residuals")
+```
+
+Next, we examine the assumption of no correlation among error terms. This time, we plot 
+residuals against lag(1) residuals. 
+```{r, echo=FALSE}
+acf(r, main = "Autocorrelation plot for residuals")
+```  
+
+Finally, given our small sample, we want to determine whether the residuals are normally 
+distributed. The following QQ-plot compares the distribution of our residuals with theoretical 
+quantiles of a normal distirbution.    
+
+```{r, echo=FALSE}
+qqnorm(r, pch = 1, frame = FALSE)
+qqline(r, col = "steelblue", lwd = 2)
+```
+
+The model does not seem to be a great fit for these data. It consistently underestimates the 
+cell count as shown in (c). Furthermore, the residual plots seem to suggest variance is 
+not constant. There does seem to be a megaphone pattern growing at later times (ignoring the 
+outlier). There does not seem to be correlation between residual terms, though, the sample 
+size may be too small to get a fairer assessment. The correlation between $r_t$ and $r_{t-1}$ 
+is `r round(cor(r, dplyr::lag(r)),2)`, which does not seem very strong. 
+
+## (e)  
+The clearance $Cl = V \times K_e$ and elimination half-life $x_{1/2} = log(2)/K_e$ are 
+parameters of interest in this experiment.  
+We find the MLEs of these parameters along with asymptotic 95% confidence intervals.  
+
+$\hat{Cl} = \hat{V}\hat{K_e}$ and 
+$\hat{x}_{1/2} = log(2)/\hat{K_e}$  
+
+To construct a confidence interval, we need the asymptotic variance, which we obtain via 
+Delta Method.  
+Notice Cl is a function of two parameters, namely V and Ke. By the Delta Method,  
+
+$$
+var(Cl) = \Delta l(V, K_e)^T I(V,K_e)^{-1}\Delta l(V,K_e)
+$$  
+$$
+\begin{bmatrix}
+-\frac{K_e}{\sigma^2}\sum_{i=1}^nx_i^2 + \sum_{i=1}^nlog(y_i)x_i - log(30/V) \sum_{i=1}^n x_i \\
+-\frac{nlog(30)}{V^2} - \frac{1}{V^2}\sum_{i=1}^n log(y_i) -\frac{K_e}{V^2}\sum_{i=1}^n x_i
+\end{bmatrix}^T
+\begin{bmatrix}
+-\frac{1}{V^2}\sum_{i=1}^nx_i & -\frac{1}{\sigma^2}\sum_{i=1}^nx^2_i \\
+-\frac{1}{\sigma^2}\sum_{i=1}^nx^2_i & -\frac{1}{V^2}\sum_{i=1}^nx_i
+\end{bmatrix}
+\begin{bmatrix}
+-\frac{K_e}{\sigma^2}\sum_{i=1}^nx_i^2 + \sum_{i=1}^nlog(y_i)x_i - log(30/V) \sum_{i=1}^n x_i \\
+-\frac{nlog(30)}{V^2} - \frac{1}{V^2}\sum_{i=1}^n log(y_i) -\frac{K_e}{V^2}\sum_{i=1}^n x_i
+\end{bmatrix}
+$$  
+and  
+$$
+var(x_{1/2}) = \frac{\partial l(V,K_e)}{\partial K_e} \times I(V,K_e)_{2,2}^{-1}
+$$  
+Witht the MLE estimates and the variance of each estimate, we can construct confidence 
+interval as follows:  
+$$
+\hat{\theta}_{MLE} \pm \Phi(0.95)\times \sqrt{var(\hat{\theta})}
+$$  
+where $\hat{\theta}$ is our estimate.  
+
+* Cl = `r CI_cl`  
+* $x_{1/2}$ = `r CI_xhalf`  
+
+
+
+
+
+
+
+
+
+

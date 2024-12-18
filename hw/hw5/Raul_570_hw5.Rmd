@@ -1,0 +1,864 @@
+---
+title: "<center> <h1>Homework 5</h1> </center>"
+author: "Raul Torres Aragon"
+date: "11/01/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(MASS)
+options(scipen=999)
+load("hw5_objects.RData")
+               
+```  
+
+
+## Problem 1.  
+
+Consider the data given in Table 1, which are a simplified version of those reported in Breslow and Day (1980). 
+These data arose from a case-control study that was carried out to investigate the relationship between 
+esophageal cancer and various risk factors. Disease status is denoted Y with Y = 0/1 corresponding 
+to without/with disease and alcohol consumption is represented by X with X = 0/1 
+denoting < 80g/ >= 80g on average per day. 
+Let the probabilities of high alcohol consumption in the cases and controls be denoted 
+$p_1 = Pr(X=1|Y=1)$ and $p_2=Pr(X=1|Y=0)$ respectively.  
+Further, let $X_1$ be the number of exposed $n_1$ cases and $X_2$ be the number of exposed from $n_2$ controls.  
+Suppose $X_i|p_i \sim Binomial(n_i, p_i)$ in the case $i=1$ and control ($i=2$) groups.  
+
+```{r, echo = FALSE}
+tab <- data.frame(`X=0` = c(104, 666), `X=1` = c(96,200), `_` = c(200, 775))
+colnames(tab) <- c("X=0","X=1", " ")
+row.names(tab) <- c("Y=1", "Y=0")
+knitr::kable(tab)
+```  
+
+Table 1: Case-control data: Y=1 corresponds to the event of esophageal cancer, and X=1 exposure to greater than 80g of alcohol per day. There are 200 cases and 775 controls.  
+
+## (a)  
+Of particular interest in studies such as this is the odds ratio defined by  
+
+$$
+\theta = \frac{P(Y=1|X=1)/P(Y=0|X=1)}{P(Y=1|X=0)/P(Y=0|X=0)}
+$$  
+Notice that the odds ratio is equal to  
+
+$$
+\theta = \frac{P(X=1|Y=1)/P(X=0|Y=1)}{P(X=1|Y=0)/P(X=0|Y=0)} = \frac{p_1/(1-p_1)}{p_2/(1-p_2)}
+$$  
+Proof:  
+By Bayes Rule:  
+$$
+P(Y=1|X=1) = \frac{P(X=1|Y=1)P(Y=1)}{P(X=1)}
+$$  
+$$
+P(Y=0|X=1) = \frac{P(X=1|Y=0)P(Y=0)}{P(X=1)}
+$$  
+Thus,
+$$
+\frac{\frac{P(X=1|Y=1)P(Y=1)}{P(X=1)}}{\frac{P(X=1|Y=0)P(Y=0)}{P(X=1)}} = 
+\frac{P(X=1|Y=1)P(Y=1)}{P(X=1|Y=0)P(Y=0)}
+$$  
+We apply the same operations to  $P(Y=1|X=1)$ and $P(Y=0|X=0)$, and construct the ratio:  
+$$
+\frac{\frac{P(X=1|Y=1)P(Y=1)}{P(X=1|Y=0)P(Y=0)}}{\frac{P(X=0|Y=1)P(Y=1)}{P(X=0|Y=0)P(Y=0)}
+}
+$$  
+and cancell $P(Y=1)$ and $P(Y=0)$, to yield:  
+$$
+\frac{P(X=1|Y=1)P(X=0|Y=0)}{P(X=1|Y=0)P(X=0|Y=1)}
+$$  
+which can be rearranged to:  
+$$
+\frac{P(X=1|Y=1)/P(X=0|Y=1)}{P(X=1|Y=0)/P(X=0|Y=0)}
+$$  
+as desired.  
+
+## (b)  
+
+We now obtain MLE and asymptotic 90% confidence interval for $\theta$ based on that table.  
+
+$$
+\theta = \frac{P(X=1|Y=1)/P(X=0|Y=1)}{P(X=1|Y=0)/P(X=0|Y=0)} = \frac{p_1/(1-p_1)}{p_2/(1-p_2)}
+$$  
+Recall $X_i|p_i \sim Bin(n_i, p_i)$ where we know $p_1 = P(X=1|Y=1)$ and $p_2 = P(X=1|Y=0)$  
+Thus the likelihood function is  
+$$
+L(p_1,_p2) = {n_1 \choose{x_1}} p_1^{x_1}(1-p_1)^{(n_1-x_1)} + 
+{n_2 \choose{x_2}} p_1^{x_2}(1-p_2)^{(n_2-x_2)} 
+$$  
+Taking logs we get  
+$$
+l(p_1, p_2) = log{n_1 \choose x_1} + x_1log(p_1) + (n_1-x_1)log(1-p_1) + 
+log{n_2 \choose x_2} + x_1log(p_2) + (n_2-x_2)log(1-p_2)  
+$$  
+Getting the Gradient of the log-likelihood function yields:  
+
+$$
+\begin{bmatrix}  
+\frac{\partial l(\boldsymbol{p})}{\partial p_1} & 
+\frac{\partial l(\boldsymbol{p})}{\partial p_1}  
+\end{bmatrix} = 
+\begin{bmatrix}
+\frac{x_1-p_1n_1}{p_1(1-p_1)} & \frac{x_2-p_2n_2}{p_2(1-p_2)}
+\end{bmatrix}
+$$  
+
+Setting each partial derivative to zero and solving for $\boldsymbol{p}$, yields:  
+$$
+\hat{p_1}_{MLE} = \frac{x_1}{n_1}  
+$$  
+$$
+\hat{p_2}_{MLE} = \frac{x_2}{n_2} 
+$$  
+
+which we readily compute from table 1:  
+$$
+\hat{p_1}_{MLE} = \frac{x_1}{n_1} = \frac{96}{96+109} 
+$$  
+$$
+\hat{p_2}_{MLE} = \frac{x_2}{n_2} = \frac{104}{104+666}
+$$
+
+Having obtained estimates for $p_1$ and $p_2$, we can then compute $\hat{\theta}_{MLE}$:  
+
+$$
+\frac{96/(96+109)} {104/(104+666)} = 5.64
+$$  
+
+To compute the asymptotic 90% confidence interval for $\theta$ we make use of the Delta Method which allows us to to compute variance of functions of estimates under certain conditions that are met in this case. But first, we compute the Information matrix, as it will be needed for the Delta Method.  
+
+$$
+FIM = Var\bigg(\frac{\partial l(\boldsymbol{p})}{\partial\boldsymbol{p}}\bigg) = 
+-E\bigg[\frac{\partial^2 l(\boldsymbol{p})}{\partial\boldsymbol{p}^2}\bigg] = 
+E\bigg[ \bigg(  \frac{\partial l(\boldsymbol{p})}{\partial\boldsymbol{p}}  \bigg)^2  \bigg]
+$$  
+We go with the second way, where the second derivative for $p_i$ is :  
+
+$$
+\frac{(2p_i-1)x_i-np_i^2}{(1-p_i)^2p_i^2}
+$$  
+
+Thus, the information matrix is
+
+$$
+FIM = 
+\begin{bmatrix}
+\frac{n_1}{p_1(1-p_1)} & 0 \\
+0 & \frac{n_2}{p_2(1-p_2)}
+\end{bmatrix}
+$$
+Recall that by the Delta Method    
+$$
+Var(\theta) = Var(log(\theta)) = \bigg[\frac{\partial l(\boldsymbol{p})}{\partial p_1} \frac{\partial l(\boldsymbol{p})}{\partial p_2}\bigg]^T FIM^{-1} \bigg[\frac{\partial l(\boldsymbol{p})}{\partial p_1}  
+\frac{\partial l(\boldsymbol{p})}{\partial p_2}\bigg] = 0.031
+$$  
+$$
+\exp\{(log(5.64) - 1.64 \times \sqrt{0.031}, log(5.64) + 1.64 \times \sqrt{0.031})\}
+$$  
+which yields a CI for the odds ratio of `r round(CI_MLE[1],2)`, `r round(CI_MLE[2],2)`.  
+
+
+### (c)  
+We now consider a Bayesian analysis. Assume that the prior distribution for $p_i$ is the beta distribution $Be(a,b)$ for i=1,2. We show that the posterior distribution $\pi(p_1,p_2|x_1,x_2)$ is given by the product of the beta distributions $Be(a+x_i, b+n_i-x_i)$.  
+
+Recall  the posterior is proportional to the product of the likelihood and the prior. Thus  
+$$
+P(\boldsymbol{p}|X) \propto 
+\sum_{i=1}^2\underbrace{{n_i \choose x_i}p_i^{x_i}(1-p_i)^{n_i-x_i}}_{Likelihood} 
+\times 
+\underbrace{p_i^{a-1}(1-p_i)^{b-1}\frac{1}{B(a,b)}}_{prior}
+$$  
+After ignoring constants and combining coefficients,  
+$$
+\sum_i^2 p_i^{x_i+a-1}(1-p_i)^{n_i-x_i+b-1}
+$$  
+which is a $Be(x_i+a, n_i-x_i + b)$  
+
+## (d)  
+We now consider the case $a = b = 1$, and obtain expressions for the posterior mean, mode and standard deviation. We then evaluate these posterior summaries for the data of Table 1, reporting 90% posterior credible intervals for $p_1$ and $p_2$.  
+
+Recall the expectation of a Beta distribution is $\frac{a}{a+b}$, the variance $\sqrt{\frac{ab}{(a+b+1)(a+b^2)}}$, and the mode $\frac{a-1}{a+b-2}$. 
+
+Given that we saw in (c) that the posterior is proportional to a Beta distribution with shape parameters $x_i+a$ and $n_i-x_i + b$ we can easily obtain expressions for these quantities.  
+
+$$
+\text{expectation} = \frac{x_i+a}{n_i-x_i + b}
+$$  
+$$
+\text{std deviation} = \sqrt{var(p_i)} = \sqrt{\frac{(x_i+a)(n_i-x_i + b)}{((x_i+a)+(n_i-x_i + b)+1)+(x_i+a+b)^2}}
+$$  
+$$
+\text{mode} = \frac{(x_i+a)-1}{(x_i+a) + (n_i-x_i + b) -2}
+$$  
+Taking $a=b=1$ yields:  
+$Ep_1$ = `r round(p1_stuff$EX,4)`  
+$Ep_2$ = `r round(p2_stuff$EX,4)`  
+stddev $p_1$ = `r round(sqrt(p1_stuff$Var),3)`  
+stddev $p_2$ = `r round(sqrt(p2_stuff$Var),3)`  
+mode $p_1$ = `r round(p1_stuff$Mode,4)`  
+mode $p_2$ = `r round(p2_stuff$Mode,4)`  
+
+
+## (e)  
+We now examine the implied prior distribution, pointing out the 90% interval.  
+Recall the prior distribution is  
+$$
+\sum_{i=1}^2 p_i^{a-1}(1-p_i)^{b-1}\frac{1}{B(a,b)}
+$$  
+where we assume a=b=1.  
+Simulating 1,000 draws from two beta distributions with a=b=1 and adding them to obtain the prior distribution yields the following histogram:  
+
+```{r echo=FALSE}
+hist(prior_dist, main = "A thousand simulated draws \n from prior(p1,p2)",
+     xlab = "prior distribution")
+abline(v = C_I_prior[[1]], col="black", lwd=3, lty=1)
+abline(v = C_I_prior[[2]], col="black", lwd=3, lty=1)
+```
+
+
+Simulating 1,000 draws from the prior distribution when the prior is assumed to be Beta(1,1) + Beta(1,1) yields the above histogram. Its 90% prior interval is `r round(C_I_prior[[1]],2)` and `r round(C_I_prior[[2]],2)`.  
+
+## (f)  
+
+We now simulate 1,000 draws from the posterior distributions $p_1|x_1$ and $p_2|x_2$, and form
+histogram representations and use these samples to obtain a sample-based 90% credible interval.  
+
+```{r echo=FALSE}
+par(mfrow=c(1,2))
+hist(p1s, main = "1000 draws from P(p1|X1)") 
+abline(v = CI_1_from_hist[[1]], col="black", lwd=3, lty=1)
+abline(v = CI_1_from_hist[[2]], col="black", lwd=3, lty=1)
+hist(p2s, main = "1000 draws from P(p2|X2)")
+abline(v = CI_2_from_hist[[1]], col="black", lwd=3, lty=1)
+abline(v = CI_2_from_hist[[2]], col="black", lwd=3, lty=1)
+```  
+
+The corresponding credible intervals are (`r round(CI_1_from_hist[[1]],2)`,`r round(CI_1_from_hist[[2]],2)`) and 
+(`r round(CI_2_from_hist[[1]],2)`,`r round(CI_2_from_hist[[2]],2)`) for $p_1|x_1$ and $p_2|x_2$ respectively.  
+
+## (g)  
+Now we sample from the posterior distribution $\theta|x_1,x_2$ and form a histogram representation. We obtain the median and 90% credible interval using these draws and compare with what we got analytically above.  
+
+```{r, echo = FALSE}
+hist(thetas, main = "histogram of 1,000 simulated thetas")
+abline(v = CI_theta[[1]], col="black", lwd=3, lty=1)
+abline(v = CI_theta[[2]], col="black", lwd=3, lty=1)
+```  
+
+The posterior sample median is `r round(quantile(thetas, probs=0.5),2)`, and the posterior sample 
+credible interval is (`r round(CI_theta[[1]],2)`, `r round(CI_theta[[2]],2)`). 
+This looks very close to what we got analytically (MLE=`r round(MLE,2)`, and confidence interval (`r round(CI_MLE[1],2)`, `r round(CI_MLE[2],2)`))  as expected.  
+
+## (h)  
+We now suppose the rate of esophageal cancer is 18 in 100,000. 
+We describe how this information may be used to evaluate $q_1 = P(Y=1|X=1)$ and $q_0 = P(Y=1|X=0)$.  
+
+Note that we're supposing $P(Y=1) = \frac{18}{100,000}$, thus $P(Y=0) = \frac{99,982}{100,000}$.  
+
+Then, by Bayes Rule:  
+$$
+q_1 = P(Y=1|\boldsymbol{X=1}) = \frac{P(\boldsymbol{X=1}|Y=1) P(Y=1)}{P(\boldsymbol{X=1}|Y=1)P(Y=1) + P(\boldsymbol{X=1}|Y=0)P(Y=0)}
+$$  
+and  
+$$
+q_0 = P(Y=1|\boldsymbol{X=0}) = \frac{P(\boldsymbol{X=0}|Y=1) P(Y=1)}{P(\boldsymbol{X=0}|Y=1)P(Y=1) + P(\boldsymbol{X=0}|Y=0)P(Y=0)}
+$$  
+Thus we can compute these probabilities using the supposed cancer rate and table 1 above as follows:  
+
+
+$$
+q_1 = P(Y=1|\boldsymbol{X=1}) = \frac{\frac{96}{200}\times\frac{18}{100,000}}{\frac{96}{200}\times \frac{18}{100,000} + \frac{109}{775}\times \frac{99,982}{100,000}}
+$$  
+
+$$
+q_0 = P(Y=1|\boldsymbol{X=0}) = \frac{\frac{104}{200}\times\frac{18}{100,000}}{\frac{104}{200}\times \frac{18}{100,000} + \frac{666}{775}\times \frac{99,982}{100,000}}
+$$
+
+$P(Y=1|X=1)$ = `r round(PY1gX1,4)`  
+$P(Y=1|X=0)$ = `r round(PY1gX0,4)`  
+
+## (i)  
+Suppose that a priori we'd like to select a Be(a,b) distribution on the rate of esophageal cancer with 5% of the mass less than 16 in 100,000 and 5% of the mass greater than 20 in 100,000. We first find a and b to satisfy these requirements, and then obtain samples from the posteriors for $q_1$ and $q_0$.  
+
+Given that there is no closed-form of the CDF of the Beta distribution we resort to numerical approach to find a and b.  
+We first create a function that computes difference between cumulative probability under a Beta for some a and b parameters and the desired [5%] cumulative probability. We square that so that the difference is always positive. We do the same for the other side of the tail in the Beta PDF for the same parameters. (That is, compute the cumulative distribution left of the right-end point against the desired [95%] cumulative probability.) We then feed this function to `optim` to find a minimum for a and b. We use minimum because we want the difference between the computed cumulative probability and our desired probability be as small as possible.  
+
+```
+myfun <- function(theta, low=16/1e5, upp=20/1e5) {
+    (0.05 - pbeta(low, theta[1], theta[2]))^2 + 
+    (0.95 - pbeta(upp, theta[1], theta[2]))^2
+}
+
+beta_params <- optim(par = c(1,1),
+                      fn = myfun,
+                      control = list(abstol = 1/1e7))$par
+
+qbeta(0.95, shape1 = beta_params[1], shape2 = beta_params[2])
+qbeta(0.05, shape1 = beta_params[1], shape2 = beta_params[2])
+```  
+
+The optimal parameters are a=`r beta_params[1]` and b=`r beta_params[2]`.  
+
+Armed with the a and b parameters, we can now draw 1,000 instances of P(Y=1) (and deduce its corresponding P(Y=0)).  
+With this, we can compute 1,000 draws of $\theta_q$ which is the ratio of $P(Y=1|X=1)$ and $P(Y=1|X=0)$ we computed in (h). The resulting posterior draws are now presented in a histogram form.  
+
+```{r, echo=FALSE}
+par(mfrow = c(1,2))
+hist(PY1gX1s, main = "posterior draws from q1", xlab = paste0("median = ", round(median_q1,5)))
+abline(v = median_q1, col="black", lwd=3, lty=1)
+hist(PY1gX0s, main = "posterior draws from q0", xlab = paste0("median = ", round(median_q0,5)))
+abline(v = median_q0, col="black", lwd=3, lty=1)
+```  
+
+Notice the medians from the posterior draws are very close to the analytically computed probabilities in (h).  
+
+## Problem 2
+
+## (a)  
+Consider the likelihood, $\hat{\theta}|\theta \sim N(\theta, V)$ and the prior $\theta \sim N(0,W)$ with V and W known. Show that $\theta|\hat{\theta} \sim N(r\hat{\theta}, rV)$ where $r=W/(V+W)$.  
+
+$$
+P(\theta|\hat{\theta}) \propto P(\hat{\theta}|\theta)\times P(\theta)
+$$  
+$$
+\propto \frac{1}{\sqrt{2\pi} V} \exp\{-(\hat{\theta} - \theta)^2/(2V^2)\} \times 
+\frac{1}{\sqrt{2\pi} W} \exp\{-\theta^2/(2W^2)\}
+$$  
+
+$$
+\propto \frac{1}{2\pi VW} \exp\{-\frac{1}{2}[\frac{1}{V}(\hat{\theta} - \theta)^2 + \frac{1}{W}\theta^2]\} 
+$$
+
+
+Define variance as precision, as follows:  
+$W = \frac{1}{W}$ for the prior and $V = \frac{1}{V}$ for the likelihood. Then  
+
+$$
+\propto \frac{\sqrt{1/(VW)}}{2\pi} \exp\{-\frac{1}{2}[(\frac{1}{V}+\frac{1}{W})\theta^2-2\frac{1}{V}\hat{\theta} + \theta^2]\} 
+$$  
+Notice this expression matches expression:  
+$$
+c_1 \exp\{-\frac{1}{2} [aX^2 -2bX + c] \}
+$$  
+which can be, after completing the square can be expressed as  
+$$
+c_1c_2 \exp\{ -\frac{1}{2a}[X^2-2\frac{b}{a} + \frac{b^2}{a^2}] \}
+$$  
+$$
+c_1c_2 \exp\{ -\frac{1}{2}a(X-\frac{b}{a})^2 \}
+$$  
+where $a=\frac{1}{V} + \frac{1}{W}$, $b=\frac{1}{W}\hat{\theta}$ and $c=\hat{\theta^2}$, resulting in a normal random variable with mean = $\frac{\hat{\theta}/V}{(1/V + 1/W)} = \frac{W}{V+W}\hat{\theta}$ and variance = $(WV)/(V+W)$ as desired.  
+
+## (b)  
+Suppose we wish to compare the models $M_0 : \theta=0$ versus $M_1: \theta \neq 0$.  
+Show that the Bayes Factor is given by:  
+
+$$
+\text{BF} = \frac{p(\hat{\theta}|M_0)}{p(\hat{\theta}|M_1)} = \frac{1}{\sqrt{1-r}}\exp\bigg(-\frac{Z^2}{2}r\bigg)
+$$  
+where $Z=\hat{\theta}/\sqrt{V}$.  
+
+Recall the posterior odds are defined as  
+
+$$
+\frac{P(M_0|\hat{\theta})}{P(M_1|\hat{\theta})} = 
+\underbrace{\frac{P(\hat{\theta}|M_0)}{P(\hat{\theta}|M_1)}}_{BF} \times \frac{P(M_0)}{P(M_1)}
+$$  
+where  
+
+$$
+P(\hat{\theta}|M_0,\theta) = \int_{\theta} P(\hat{\theta}|M_0,\theta)P(\theta|M_0)d\theta
+$$  
+But notice that when $\theta = 0$, (and thus $\theta$ is not a random quantity), this collapses to  
+$$
+\int_{\theta}P(\hat{\theta}|M_0,\theta)d\theta
+$$
+
+$$
+P(\hat{\theta}|M_1,\theta) = \int_{\theta} P(\hat{\theta}|M_1,\theta)P(\theta|M_1)d\theta
+$$  
+
+Hence,  
+
+$$
+P(\hat{\theta}|M_0,\theta) = \frac{1}{\sqrt{2\pi}V}\exp\{ -\frac{1}{2V}\hat{\theta}^2 \}
+$$  
+and when intergrating from $-\infty$ to $\infty$  
+$$
+P(\hat{\theta}|M_1,\theta) = \frac{1}{\sqrt{2\pi}(V+W)}\exp\{-\frac{1}{2(V+W)} \hat{\theta}^2 \}  
+$$  
+
+which is a normal variable that can be expressed a normal:  
+
+$$
+\frac{1}{\sqrt{1-W/(V+W)}} \exp\{ -\frac{\hat{\theta}/V}{2(V+W)}\}
+$$  
+
+$$
+\frac{1}{\sqrt{1-r}}\exp\bigg(-\frac{Z^2}{2}r\bigg)
+$$  
+as desired.  
+
+## (c)  
+
+Suppose we have a prior probability $\pi_1 = P(M1)$ of model $M_1$ being true. Write down an expression for the posterior probability $P(M_1|\hat{\theta}_1)$, in terms of the BF.  
+Recall $BF = \frac{P(\hat{\theta}|M_0)}{P(\hat{\theta}|M_1)}$, solving for $P(\hat{\theta|M_0)}$ we get:  
+
+$$
+P(\hat{\theta}|M_0) = BP \times P(\hat{\theta}|M_1)
+$$  
+Now,  
+$$
+P(M_1|\hat{\theta}) = \frac{P(\hat{\theta}|M_1)P(M_1)}{P(\hat{\theta}|M_1)P(M_1) + P(\hat{\theta}|M_0)P(M_0)}
+$$  
+
+
+$$
+\frac{P(\hat{\theta}|M_1)\pi_1}{P(\hat{\theta}|M_1)\pi_1 + P(\hat{\theta}|M_0)(1-\pi_1)} =
+$$  
+
+
+$$
+\frac{P(\hat{\theta}|M_1)\pi_1}{P(\hat{\theta}|M_1)\pi_1 + [BP \times P(\hat{\theta}|M_1)](1-\pi_1)} =
+$$  
+
+$$
+\frac{P(\hat{\theta}|M_1)\pi_1}
+{P(\hat{\theta}|M_1)(\pi_1 + BP(1-\pi_1))} =
+$$  
+$$
+\frac{\pi_1}
+{\pi_1 + BP(1-\pi_1)}
+$$  
+
+## (d)  
+
+Now we suppose we have summaries from two studies: $\theta_1$ $V_1$, and $\theta_2$ $V_2$.  
+Assuming $\theta_j|\theta \sim N(\theta_j, V_j)$ for $j=1,2$ and the prior $\theta \sim N(0,W)$, we derive the posterior $P(\theta|,\theta_1,\theta_2)$.  
+
+Recall that it does not matter if we update the model step by step (first with study 1, then with study 2, or viceversa), or all toghether in one fell swoop. Thus:  
+
+$$
+\underbrace{P(\theta|\theta_1)}_{posterior 1} = \frac{P(\theta_1|\theta)P(\theta)}{P(\theta_1)}
+$$  
+then we update prior as:  
+$$
+P(\theta|\theta_1,\theta_2) = \frac{P(\theta_2|\theta_1,\theta)\overbrace{P(\theta|\theta_1)}^{posterior 1}}{P(\theta_2|\theta_1)}
+$$  
+Factorizing the right-hand side of  
+$$
+P(\theta|\theta_1,\theta_2) = \frac{P(\theta_1,\theta_2|\theta) P(\theta)}{P(\theta_1,\theta_2)}
+$$  
+we get  
+$$
+P(\theta|\theta_1,\theta_2) = 
+\frac{P(\theta_2|\theta_1, \theta)P(\theta|\theta_1)}{P(\theta_2|\theta_1)} \times
+\frac{P(\theta_1|\theta)P(\theta)}{P(\theta_1)}
+$$  
+Thus we can update priors in one or two steps in whichever order. Hence  
+
+$$
+P(\theta|\theta_1,\theta_2) \propto \underbrace{P(\theta_1|\theta)P(\theta_2|\theta)}_{likelihood}\overbrace{P(\theta)}^{prior}
+$$  
+$$
+\propto \bigg[\exp\{-\frac{1}{2V_1}(\theta_1-\theta)^2 \}\bigg] \times 
+\bigg[\exp\{-\frac{1}{2V_2}(\theta_2-\theta)^2 \}\bigg] \times 
+\bigg[\exp\{-\frac{1}{2W}\theta^2  \}\bigg]
+$$  
+
+We first multiply second-part of likelihood with prior to get $N(\frac{W}{V_1+W} \theta_1, \frac{W}{V_1+W}V_1)$.  
+This is similar to what we did above in 2(b).  
+
+$$
+\bigg[\exp\{-\frac{1}{2V_2}(\theta_2-\theta)^2 \}\bigg] \times 
+\bigg[\exp\{-\frac{1}{2W}\theta^2  \}\bigg]
+$$  
+
+Then we multiply that with first part of likelihood:  
+
+$$
+\propto \bigg[\exp\{-\frac{1}{2V_2}(\theta_2-\theta)^2 \}\bigg] \times 
+\bigg[\exp\{-\frac{1}{2(\frac{W}{V_1+W}V_1)}(\theta_1-(\frac{W}{V_1+W} \theta))^2 \}\bigg]
+$$
+
+to get yet another normal. $N(\frac{V_1W\theta_1 + V_2W\theta_2}{V_1+W}, \frac{2V_1V_2W}{V_1V_2+V_1W+V_2W})$.  
+
+## (e)  
+
+We now derive the Bayes Factor for $\frac{P(\hat{\theta_1}\hat{\theta_2}|M_0)}{P(\hat{\theta_1}\hat{\theta_2}|M_1)}$, and compare models $M_0: \theta=0$ versus $M_1:\theta \neq 0$.  
+
+Notice that the numerator of the Bayes Factor is   
+$$
+P(\hat{\theta}_1,\hat{\theta}_2|M_0) = P(\hat{\theta}_1,\hat{\theta}_2|\theta=0) = P(\hat{\theta}_1|\theta=0)P(\hat{\theta_2}|\theta=0)
+$$  
+Thus  
+
+$$
+\frac{1}{\sqrt{2\pi}V_1} \exp\{-\frac{1}{2V_1} (\hat{\theta_1}-0)^2\} \times 
+\frac{1}{\sqrt{2\pi}V_2} \exp\{-\frac{1}{2V_2} (\hat{\theta_2}-0)^2\}
+$$  
+$$
+\frac{1}{2\pi V_1V_2} \exp\{ -\frac{1}{2} [\frac{\hat{\theta_1}^2V_2 + \hat{\theta}_2^2V_1}{V_1V_2}] \}
+$$  
+
+The denominator is a lot scarier.  
+
+$$
+P(\hat{\theta_1}\hat{\theta_2}|M_1) = 
+\int_{\infty}^{\infty}P(\hat{\theta_1}\hat{\theta_2}|\theta, M_1)\pi(\theta|M_1)d\theta = 
+\int_{\infty}^{\infty}P(\hat{\theta_1}|\theta, M_1) P(\hat{\theta_2}|\theta, M_1) \pi(\theta|M_1)d\theta
+$$  
+$$
+\int_{\infty}^{\infty} 
+\frac{1}{\sqrt{2\pi}V_1} \exp\{-\frac{1}{2V_1} (\hat{\theta_1}-\theta)^2\} \times
+\frac{1}{\sqrt{2\pi}V_2} \exp\{-\frac{1}{2V_2} (\hat{\theta_2}-\theta)^2\} \times
+\frac{1}{\sqrt{2\pi}W} \exp\{-\frac{1}{2W} (\theta)^2\} d\theta
+$$  
+Combining all the terms in the exponent, we get:  
+
+$$
+\frac{1}{\sqrt{2\pi}V_1 \sqrt{2\pi}V_2 \sqrt{2\pi}W} \int_{\infty}^{\infty} 
+\exp\{ -\frac{1}{2V_1} (\hat{\theta_1}-\theta)^2  
+-\frac{1}{2V_2} (\hat{\theta_2}-\theta)^2\  
+-\frac{1}{2W} (\theta)^2
+\}
+$$  
+$$
+C_1 \int_{\infty}^{\infty}  
+\exp\{ 
+\frac{1}{2}
+\}
+$$
+
+
+## (f)  
+We will show these results can be used in the context of a genome-wide association
+study on Type II diabetes, reported bu Frayling et al. (2007, Science). Two sets of
+data were independently collected, resulting in two log odds ratios $\hat{\theta}_j = 1,2$
+each SNP. For SNP rs9939609 point estimates of the odds ratio (95% confidence intervals) were 
+1.27 (1.16, 1.37) and 1.15 (1.09,1.23). 
+Suppose we have a normal prior for the log odds ratio that has a 95% range [log(2/3), log(3/2)].  
+
+
+## (g)  
+We calculate the Bayes factor based on the first dataset only, and then based on both datasets.
+
+## (h)  
+With a prior of $\pi$ = 1/5000, calculate the probabilities, $P(M_1|\hat{\theta})$ and $P(M_1|\hat{\theta_1,}\hat{\theta_2})$.  
+
+
+## Problem 3.  
+We will carry out a Bayesian analysis of the lung cancer and radon data, that were examined in lectures, using INLA. These data are available on the class website.
+The likelihood is  
+
+$$
+Y_i|\beta\sim_{ind}\text{Poisson}(E_i\exp(\beta_0+\beta_1x_i))
+$$  
+where $\beta = [\beta_0, \beta_1]^TY_i$ and $E_i$ are observed and expected counts of lung cancer incidence in Minnesota in 1998-2002, and $x_i$ is a measure of residential radon in county $i$, $i=1, \dots, n$.  
+
+## (a)  
+Analyze these data using the default prior specifications in INLA. Produce figures of the INLA approximations to the marginal distributions of $\beta_0$ and $\beta_1$, along with the posterior means, posterior standard deviations, and 2.5%, 50%, 97.5% quantiles.  
+
+The INLA approximations to the marginal distributions  of $\beta_0$ and $\beta_1$ are found in the following figure:  
+
+```{r, echo = FALSE}
+par(mfrow = c(1,2))
+hist(beta_0_marg, main = "INLA marginal approximation\nof beta_0", xlab = "b0 approximations")
+hist(beta_1_marg, main = "INLA marginal approximation\nof beta_1", xlab = "b1 approximations")
+
+```  
+
+The posterior means, standard deviations, and 2.5%, 50%, and 97.5% quantiles for the intercept (first row)
+and $\beta_1$ (second row) coefficients are in this table:  
+
+```{r, include = FALSE}
+knitr::kable(round(inla_beta_results,3))
+
+```
+
+
+
+## (b)  
+For a more informative prior specification we may reparameterize the model as
+
+$$
+Y_i|\theta \sim_{ind} Poisson(E_i\theta_0\theta_1^{x_i-\bar{x}})
+$$
+
+where $\boldsymbol{\theta} = [\theta_0, \theta_1]^T$ where  
+
+$$
+\theta_0 = E[Y/E | x=\bar{x}] = \exp\{\beta_0 + \beta_1 \bar{x}\}
+$$  
+
+is the expected standardized mortality ratio in an area with average radon. The parameter $\theta_1 = \exp(\beta_1)$ is the relative risk associated with a one-unit increase in radon.  
+
+For $\theta_0$ we assume a lognormal prior with 2.5% and 97.5% quantiles of 0.67 ans 1.5 to five $\mu =0, \sigma = 0.21$. For $\theta_1$ we again take a lognormal prior and assume the relative risk associated with a one-unit increase in radon is between 0.2 and 1.2 with probability 0.95 to give $\mu = -0.02, \sigma = 0.10$. By converting into normal priors in INLA, we rerun the analysis and report the same summaries as above.  
+
+We run the same summaries but now with more informative priors:  
+
+```{r echo = FALSE}
+par(mfrow = c(1,2))
+hist(beta_0_marg2, main = "INLA marginal approximation\nof beta_0", xlab = "b0 approximations")
+hist(beta_1_marg2, main = "INLA marginal approximation\nof beta_1", xlab = "b1 approximations")
+```  
+
+And the table with posterior means, standard deviations, and 2.5%, 50%, and 97.5% quantiles for the intercept (first row) and $\beta_1$ (second row) coefficients:  
+
+```{r, echo = FALSE}
+knitr::kable(round(inla_beta_results2,3))
+```
+
+
+Because we demeaned `demeaned_rad` the interpretation is not the same as in part (a) but the models are the same (except for the prior change).  
+
+
+## Apendix
+```{}
+# Raul Torres Aragon
+# Stat 570
+# Date: 2020/11/01
+# Assignment 5
+
+
+# ~~~~~~~~~~ #
+# QUESTION 1 #
+# ~~~~~~~~~~ #
+
+# (b)
+p1 <- (96/(96+109))
+p2 <- (104/(104+666))
+n1 <- 200
+n2 <- 775
+num <- (96/(96+109)) / (109/(96+109))
+den <- (104/(104+666)) / (666/(104+666))
+MLE <- num/den
+
+FIM = matrix(c( n1/(p1*(1-p1)), 0, 0, n2/(p2*(1-p2))), nrow=2, ncol=2)
+
+Grad <- matrix(c(1/(p1*(1-p1)),  1/(p2*(1-p2))), nrow=1, ncol=2)
+
+VarLogTheta <- Grad %*% solve(FIM) %*% t(Grad)
+
+CI_MLE <- c(exp(log(MLE)-qnorm(0.95,mean=0,sd=1)*sqrt(VarLogTheta)),
+            exp(log(MLE)+qnorm(0.95,mean=0,sd=1)*sqrt(VarLogTheta)))
+
+# (d)
+
+a1 <- 97; b1 <- 105
+a2 <- 109; b2 <- 667
+
+get_beta_stuff <- function(a, b) {
+  EX <- a/(a+b)
+  Var <- (a*b) / ((a+b+1)*(a+b)^2)
+  Mode <- (a-1)/(a+b-2)
+  
+  r <- list("EX" = EX, "Var" = Var, "Mode" = Mode)
+  return(r)
+}
+
+p1_stuff <- get_beta_stuff(a1, b1)
+p2_stuff <- get_beta_stuff(a2, b2)
+
+
+CI_1 <- c(qbeta(p = .05, shape1 = 97, shape2 = 105),
+          qbeta(p = .95, shape1 = 97, shape2 = 105))
+CI_2 <- c(qbeta(p = .05, shape1 = 109, shape2 = 667),
+          qbeta(p = .95, shape1 = 109, shape2 = 667))
+
+# (e)
+# 
+p1_dist <- rbeta(1e3, shape1 = 1, shape2 = 1)
+p2_dist <- rbeta(1e3, shape1 = 1, shape2 = 1)
+prior_dist <- p1_dist + p2_dist
+C_I_prior <- quantile(prior_dist, probs=c(0.05,0.95))
+
+hist(prior_dist, main = "A thousand simulated draws \n from prior(p1,p2)",
+     xlab = "prior distribution")
+abline(v = C_I_prior[[1]], col="black", lwd=3, lty=1)
+abline(v = C_I_prior[[2]], col="black", lwd=3, lty=1)
+
+
+
+
+# (f)
+n <- 1e4
+p1s <- rbeta(n=n, a1, b1)
+p2s <- rbeta(n=n, a2, b2)
+
+CI_1_from_hist <- c(quantile(p1s, probs = 0.05), quantile(p1s, probs = 0.95))
+CI_2_from_hist <- c(quantile(p2s, probs = 0.05), quantile(p2s, probs = 0.95))
+
+par(mfrow=c(1,2))
+
+hist(p1s, main = "1000 draws from P(p1|X1)") 
+abline(v = CI_1_from_hist[[1]], col="black", lwd=3, lty=1)
+abline(v = CI_1_from_hist[[2]], col="black", lwd=3, lty=1)
+
+hist(p2s, main = "1000 draws from P(p2|X2)")
+abline(v = CI_2_from_hist[[1]], col="black", lwd=3, lty=1)
+abline(v = CI_2_from_hist[[2]], col="black", lwd=3, lty=1)
+
+
+
+
+# (g)
+
+theta <- function(p1, p2) {
+  num <- p1/(1-p1)
+  denom <- p2/(1-p2)
+  return(num/denom)
+}
+
+thetas <- theta(p1s, p2s)
+CI_theta <- c(quantile(thetas, 0.05), quantile(thetas, 0.95))
+
+hist(thetas, main = "histogram of 1,000 simulated thetas")
+abline(v = CI_theta[[1]], col="black", lwd=3, lty=1)
+abline(v = CI_theta[[2]], col="black", lwd=3, lty=1)
+
+
+
+# (h)
+PY1 = 18/100000
+PY0 = 1-PY1
+PY1gX1 = ((96/200)*PY1)/(((96/200)*PY1)+((109/775)*PY0))
+PY1gX0 = ((104/200)*PY1) / ((104/200)*PY1 + (666/775)*PY0)
+
+
+# (i)
+# numerically find a and b
+myfun <- function(theta, low=16/1e5, upp=20/1e5) {
+    (0.05 - pbeta(low, theta[1], theta[2]))^2 + 
+    (0.95 - pbeta(upp, theta[1], theta[2]))^2
+}
+
+beta_params <- optim(par = c(1,1),
+                      fn = myfun,
+                      control = list(abstol = 1/1e7))$par
+
+qbeta(0.95, shape1 = beta_params[1], shape2 = beta_params[2])
+qbeta(0.05, shape1 = beta_params[1], shape2 = beta_params[2])
+
+alpha <- beta_params[1]
+beta <- beta_params[2]
+
+py1s <- rbeta(n=1000, alpha, beta)
+py0s <- 1-py1s
+
+PY1gX1s <- ((96/200)*py1s)/(((96/200)*py1s)+((109/775)*py0s))
+median_q1 <- quantile(probs= 0.5, PY1gX1s)
+
+PY1gX0s <- ((104/200)*py1s) / ((104/200)*py1s + (666/775)*py0s)
+median_q0 <- quantile(probs= 0.5, PY1gX0s)
+
+
+theta_q <- PY1gX1s/PY1gX0s
+
+
+# ~~~~~~~~~~ #
+# QUESTION 2 #
+# ~~~~~~~~~~ #
+
+# ~~~~~~~~~~ #
+# QUESTION 3 #
+# ~~~~~~~~~~ #
+library("INLA")
+library("dplyr")
+
+dlung <- read.table(url("http://faculty.washington.edu/jonno/book/MNlung.txt"),
+                    sep = "\t", header = TRUE) |> as_tibble()
+drad  <- read.table(url("http://faculty.washington.edu/jonno/book/MNradon.txt"),
+                    sep = " ", header = TRUE) |> as_tibble()
+
+colnames(dlung) <- c("county", "county_n", 
+                     "obs_male",  "exposure_male", 
+                     "obs_female","exposure_female", 
+                     "avg_male", "avg_female")
+
+colnames(drad) <- c("county_n", "radon")
+
+df <- dlung |> 
+      left_join(drad |> 
+                group_by(county_n) |> 
+                summarise(mean_rad = mean(radon, na.rm = TRUE)),
+      by = "county_n") |>
+      mutate(obs_all = obs_male + obs_female)
+
+
+## (a)
+
+
+inla_fit <- inla(formula = obs_all ~ mean_rad, family = "poisson", data = df) #, 
+#                 control.compute=list(config = TRUE))
+
+inla.posterior.sample(n=100, result = inla_fit)
+
+beta_0_marg <- inla_fit$marginals.fixed$`(Intercept)`[,1]
+beta_1_marg <- inla_fit$marginals.fixed$mean_rad[,1]
+inla_beta_results <- inla_fit$summary.fixed |> as_tibble() |> dplyr::select(-mode, -kld)
+inla_post_results <- inla_fit$summary.fitted.values |> as_tibble()
+#inla_post_samples <- inla.posterior.sample(n = 5, inla_fit2)
+
+
+## (b)
+
+# demean X
+df$demeaned_rad <- df$mean_rad - mean(df$mean_rad)
+
+# recall INLA takes in precision not sigma
+inla_fit2 <- inla(formula = obs_all ~ demeaned_rad, 
+                  family = "poisson", 
+                  data = df,
+                  control.fixed = list(mean.intercept=0, 
+                                       prec.intercept=1/0.21^2,
+                                       mean          = -0.02,
+                                       prec          =list(param=1/0.10^2, prior = "lognormal"))
+              )
+
+beta_0_marg2 <- inla_fit2$marginals.fixed$`(Intercept)`[,1]
+beta_1_marg2 <- inla_fit2$marginals.fixed$demeaned_rad[,1]
+inla_beta_results2 <- inla_fit2$summary.fixed |> as_tibble() |> dplyr::select(-mode, -kld)
+inla_post_results2 <- inla_fit2$summary.fitted.values |> as_tibble()
+
+save.image(file = "/Stat 570/hw/hw5/hw5_objects.Rdata")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

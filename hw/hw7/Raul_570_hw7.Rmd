@@ -1,0 +1,556 @@
+---
+title: "Homework 7"
+author: "Raul Torres Aragon"
+date: "2022-11-29"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(MASS)
+options(scipen=999)
+load("hw7_objects.RData")
+```
+
+## (1)  
+
+In this question a simulation study to investigate the impact on inference of omitting 
+covariates in logistic regression will be performed, in the situation in which the 
+covariates are independent of the exposure of interest. Let $x$ be the covariate of 
+interest and $z$ another covariate. Suppose the true (adjusted) model is 
+$Y_i | x_i, z_i \sim_{iid} \text{Bernoulli}(p_i)$, with  
+
+$$
+\log\bigg(\frac{p_i}{1-p_i}\bigg) = \beta_0+\beta_1x_i+\beta_2z_i
+$$  
+
+A comparison with the unadjusted model $Y_i|x_i \sim \text{Bernoulli}(p_i^*)$, where  
+$$
+\log\bigg(\frac{p^*_i}{1-p^*_i}\bigg) = \beta^*_0+\beta^*_1x_i
+$$  
+
+for $i=1,\dots,n = 1000$ will be made. Suppose $x$ is binary with $Pr(X=1)=0.5$ and 
+$Z\sim_{iid}N(0,1)$ with $x$ and $z$ independent. Combinations of the parameters 
+$\beta_1=0.4, 1.1$ and $\beta_2=0.6,1.2,2.5$, with $\beta_0=-2.5$ in all cases, will be 
+considered.  
+
+For each combination of parameters compare the results from the two models, (1) and (2), 
+with respect to:  
+
+i. $E[\hat{\beta}_1]$ and $E[\hat{\beta}^*_1]$, as compared to $\beta_1$.
+ii. The standard errors of $\hat{\beta}_1$ and $\hat{\beta}^*_1$.
+iii. The coverage of 95% confidence intervals for $\beta_1$ and $\beta^*_1$.
+iv. The probability of rejecting $H_0: \beta_1 = 0$ (the power) under both models using a
+Wald test.  
+Based on the results, summarize the effect of omitting a covariate that is independent of 
+the exposure of interest, in particular in comparison with the linear model case.  
+
+To run this simulation, we fix b0 at -2.5. At each of the 5,000 iterations, I create a binary 
+X using `rbinom(n=1000,size=1,prob=0.5)`. We also create Z with `rnorm(n=1000,mean=0,sd=1)`. 
+With these vectors in hand, we then create a `p` vector containing the probabilities of Y as 
+`exp(b0+b1*x+b2*z)/(1 + exp(b0+b1*x+b2*z))`. We then create Y qith `rbinom(prob=p)`.  
+We then call `glm()` twice, once with `y~x+z` and once `y~x`. I exctract the coefficients for 
+X, compute indicator vectors for when the estimate is inside the 95% CI at each case, and 
+when the pvalue is <0.05. This results in vectors of size 5,000 for `b1, b1_star, inside`, 
+`inside_star, signif`, and `signif_star`. We take mean of all vectors, to compute expectations, 
+coverage, and power, respectively. We take the squared root of the variance of `b1` and 
+divide by the squared root of the vector size ($\sqrt{1000}$) to obtain SE of `b1`. We then 
+do the same for `b1_star`. We repeat the simulation for the above mention combinations of 
+$\beta_1$ and $\beta_2$ values. (For more details and code see Appendix.) 
+The result is this table:  
+
+```{r, echo=FALSE}
+knitr::kable(res_tab, digits = c(2,2,4,4,2,2,2,2), caption = "Results from 5,000 simulations")
+```
+
+As you can see, omitting $Z$ does not seem to have a big impact when the coefficient of $Z$ 
+is small. As the coefficient of $Z$ grows large though, the $\hat{\beta^*}_1$ becomes more 
+and more biased. Coverage is basically trash, and you're almost guaranteed to reject the 
+null that $\beta_1^*$ is zero. This is bad (when the effect is large). How large you say? 
+Well, we don't really know. See for yourself in this case.  
+
+In terms of comparing it with the linear model, well, the linear model does not seem to 
+capture the true $\beta_1$ at all when controlling or not controlling for Z. So, having 
+non-linear model is an improvement from the linear model when the true relationship is 
+definitely non-linear.  
+
+```{r, echo=FALSE}
+knitr::kable(res_tab_lm, digits = c(3,5,2,3),
+             caption = "Results from 5,000 simulations using a linear model ommiting Z")
+```
+
+```{r, echo=FALSE}
+knitr::kable(res_tab_lm_z,digits = c(3,5,2,3),
+             caption = "Results from 5,000 simulations using a linear model including Z")
+```
+
+## (2)  
+The Pima, or Akimel O'odham, are an indigenous Native American tribe that originates from southern Arizona. In this question you will analyze data on Pima native American women who are at least 21 years of age; these data were originally from the National Institute of Diabetes and Digestive and Kidney Diseases. We will take the aim of the analysis to obtain a model to understand the association between diabetes status and the covariates in the sampled population, using binomial GLMs. The data may be found in the `mlbench` library and are called PimaIndiansDiabetes2.
+The variables we will examine as predictors are:  
+
+- `pregnant` Number of times pregnant  
+- `glucose` Plasma glucose concentration (glucose tolerance test)  
+- `mass` Body mass index (weight in kg/(height in m2)  
+- `pedigree` Diabetes pedigree function  
+- `age` Age (years)  
+
+## (a)  
+We will examine models of the form  
+
+$$
+Y_i|p_i \sim \text{Binomial}(1,p_i)
+$$
+$$
+g(p_i) = \beta_0 
++ \beta_1\times \text{pregnant}
++ \beta_2\times \text{glucose}
++ \beta_3\times \text{mass}
++ \beta_4\times \text{pedigree}
++ \beta_1\times \text{age}
+$$  
+for $i=1 \dots, n$ women, and where the link function $g(.)$ is one of `logit`, `probit`, `cloglog`, 
+after removing all missing values from the data set.  
+
+After subsetting the data set to the above outcome and control variables, and after removing 
+all rows with missing values in the said variables, I ended up with a table with 752 rows 
+and 6 columns.  
+
+## (b)  
+Fit the three binomial models that correspond to the different link functions, and give a 
+table containing the parameter estimates along with standard errors.  
+We now fit all three models using `glm()` and their respective link. I present the results 
+parameter estimates and standard errors in table.  
+
+```{r, echo=FALSE}
+knitr::kable(tab_b, digits = 3, 
+             caption = "Parameter estimates and standard errors by link function")
+```
+
+
+## (c)  
+Which link function provides the most interpretable coefficients? 
+For this link function, provide a brief summary of your fitted model.  
+
+The most interpretable link is the logit. This link gives linear interpretation of the 
+coefficients on the log-odds of the outcome being = 1 (in this case `diabetes`=1). By 
+exponentiating the coefficients, we can then see associations on the odds.  
+
+```{r, echo=FALSE}
+knitr::kable(tab_c, caption = "Logit link coefficients and exponentiated coefficients")
+```
+
+Table 3 shows that the odds of diabetes are 13% higher for each month in the pregnancy. 
+A one unit increase in glucose score is associated with a 4% increase in the odds of 
+diabetes for these women. Changing body mass index by one unit is associated with 9% 
+increase in the odds of diabetes. Each year the odds of diabetes for these women go up 1%. 
+Lastly, the odds more than double with a one unit change in pedigree change.  
+
+## (d)  
+Provide a plot showing the estimated association between diabetes prevalence and pedigree, under the three models. Provide pointwise confidence intervals to your plot, carefully explaining your method. How should one interpret this plot?  
+
+The following plot shows the three models in one plot without confidence intervals.  
+
+```{r, echo=FALSE}
+plot(diabetes~pedigree, data = mydata,
+     ylim=c(0,1),
+     ylab="Probability of Diabetes",
+     xlab="Diabetes Pedigree",
+     xlim=c(-1.5,3.5),
+     main = "Association between pedigree and prevalence of diabetes\nfor three link functions in a binomial model")
+lines(xseq, fitted_log$fit, col="darkgreen")
+lines(xseq, fitted_pro$fit, col="darkorange")
+lines(xseq, fitted_cll$fit, col="darkblue")
+legend("topleft",
+       fill=c("darkgreen","darkblue","darkorange"),
+       col=c("darkgreen","darkblue","darkorange"),
+       bty="n",
+       legend=c("Logit","Comp log-log","Probit"))
+```
+  
+The following plot shows each model with its respective 92% (yes, 92%) confidence intervals.  
+To obtain confidence intervals, we have to obtain the standard error as well as the predicted 
+values. Once we have the standard errors, we have to "undo" the link to get to the probability scale.  
+For `logit` this means 
+$\exp(\boldsymbol{x}_i\boldsymbol{\hat{\beta}})/(1-\exp(\boldsymbol{x}_i\boldsymbol{\hat{\beta}}))$.  
+where $\hat{y_i}_{logit}$ is `diabetes` and $\boldsymbol{x}_i$ are the values of each 
+covariate held at median, except for `pedigree`.  
+
+So, first we obtain predicted values as follows:  
+
+For logit:  
+$\hat{y_i}_{logit} = \exp(\boldsymbol{x}_i\boldsymbol{\hat{\beta}})/(1-\exp(\boldsymbol{x}_i\boldsymbol{\hat{\beta}}))$  
+To get the 92% confidence interval, we  
+$\exp(\boldsymbol{x}_i\boldsymbol{\hat{\beta}} \pm 1.75\times SE(\boldsymbol{\hat{\beta}}))/(1-\exp(\boldsymbol{x}_i\boldsymbol{\hat{\beta}} \pm 1.75\times SE(\boldsymbol{\hat{\beta}}))))$  
+
+  
+  
+For complimentary log-log:  
+$\hat{y_i}_{cll} = 1-\exp(-\exp(\boldsymbol{x}_i\boldsymbol{\hat{\beta}}))$  
+To get the 92% confidence interval, we
+$\hat{y_i}_{cll} = 1-\exp(-\exp(\boldsymbol{x}_i\boldsymbol{\hat{\beta}} \pm1.75\times SE(\boldsymbol{\hat{\beta}})))$  
+
+
+For probit, we have to take the inverse of the normal CDF. We used R's function `predict` to 
+do obtain predicted values, SE, and to then compute 92% confidence intervals. 
+(See appendix for code)  
+
+
+```{r, echo=FALSE}
+par(mfrow=c(1,3))
+
+# logistic
+plot(diabetes~pedigree, data = mydata,
+     ylim=c(0,1),
+     ylab="Probability of Diabetes",
+     xlab="Diabetes Pedigree",
+     xlim=c(-1,3), main="link=logit")
+lines(xseq, fitted_log$fit, col="darkgreen")
+lines(xseq, fitted_log$fit + z*fitted_log$se.fit, col="darkgreen", lty=2)
+lines(xseq, fitted_log$fit - z*fitted_log$se.fit, col="darkgreen", lty=2)
+
+# cloglog
+plot(diabetes~pedigree, data = mydata,
+     ylim=c(0,1),
+     ylab="Probability of Diabetes",
+     xlab="Diabetes Pedigree",
+     xlim=c(-1,3), main = "link=cloglog")
+lines(xseq, fitted_cll$fit, col="darkblue")
+lines(xseq, fitted_cll$fit + z*fitted_cll$se.fit, col="darkblue", lty=2)
+lines(xseq, fitted_cll$fit - z*fitted_cll$se.fit, col="darkblue", lty=2)
+
+# probit
+plot(diabetes~pedigree, data = mydata,
+     ylim=c(0,1),
+     ylab="Probability of Diabetes",
+     xlab="Diabetes Pedigree",
+     xlim=c(-1,3), main = "link=probit")
+lines(xseq, fitted_pro$fit, col="darkorange")
+lines(xseq, fitted_pro$fit + z*fitted_pro$se.fit, col="darkorange", lty=2)
+lines(xseq, fitted_pro$fit - z*fitted_pro$se.fit, col="darkorange", lty=2)
+mtext("Predicted probabilities and 92% confidence interval", 
+      side=3, line=-1.25, outer=TRUE)
+
+```
+
+Notice that the predicted probabilities are roughly linear in the domain of interest 
+(where `pedigree` is between 0 and 2.5). This makes me think that an LPM wouldn't be so 
+bad, but we'd have to make sure that also holds for the other covariates.  
+
+In terms of interpretation, these plots suggest that the probability of finding diabetes 
+goes up with pedigree. A pedigree of 2.5 is roughly associated with a probability of 
+diabetes between 30 and 55% depending on the link, based on these three binomial models.  
+
+## (e)  
+Suppose the aim of the analysis was prediction, rather than understanding associations. 
+How would this affect the way you carry out your analysis, and how would you assess the 
+success of a model? There is no need to do any analyses here, I just want to see an 
+outline of what you would do.  
+
+Because interpretation is not important when the goal is prediction, I would simply fit these 
+three models with other variations in terms of covariates, interactions, and links. I would include 
+LPM and even consider non-parametric approaches such as support vector machines or ensamble models 
+with tree-based methods (random forest). Boosting would also be on the table.  
+Once I have a set of candidate models, I would assess their performance. To do so, I'd split 
+the data into a training and testing sets. In this case we have 752 observations, so I would 
+split it half and half (maybe even do cross validation with 5 folds of about 150 observations each).  
+I would then fit all candidate of models on the training set (or on each training fold if doing CV). Then, 
+I would see how they perform in terms of correct predictions of diabetes in the test set. I
+would look for accuracy, but also precision, and recall. (I think a false-negative is less desirable 
+than a false-positive though both are bad). I would then produce confusion matrices, and ROC curves to 
+firther compare their predictive power. Once I have a model that clearly outperforms the rest, 
+I would fit the whole data set with that model and then produce predictions for unseen data.  
+
+## Appendix
+```{}
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# student: Raul
+# course: STAT 570
+# assignment: hw7
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+library(tidyverse)
+library(dplyr)
+rm(list=ls())
+
+#~~~~~~~~~~~#
+# Problem 1 #
+#~~~~~~~~~~~#
+n <- 1e3
+b0 <- -2.5
+
+mysim <- function(b1, b2, N) {
+  betas_1 <- rep(0,N)
+  betas_1_star <- rep(0,N)
+  inside <- rep(0,N)
+  inside_star <- rep(0,N)
+  signif_b1 <- rep(0,N)
+  signif_b1_star <- rep(0,N)
+  cz <- qnorm(0.975, 0, 1)
+  
+  for(i in 1:N){
+    x <- rbinom(n=n, size=1, prob=0.5)
+    z <- rnorm(n=n, mean=0, sd=1)
+    p <- exp(b0+b1*x+b2*z)/(1 + exp(b0+b1*x+b2*z))
+    y <- rbinom(n=n, size=1, prob=p)
+    
+    fit_tru <- glm(y~x+z, family = binomial(link="logit")) |> summary() %>% .$coefficients
+    fit_noz <- glm(y~x  , family = binomial(link="logit")) |> summary() %>% .$coefficients
+    
+    betas_1[i] <- fit_tru[2,1]
+    betas_1_star[i] <- fit_noz[2,1]
+    inside[i]      <- as.numeric(fit_tru[2,1]-cz*fit_tru[2,2] < b1 & b1 < fit_tru[2,1]+cz*fit_tru[2,2])
+    inside_star[i] <- as.numeric(fit_noz[2,1]-cz*fit_noz[2,2] < b1 & b1 < fit_noz[2,1]+cz*fit_noz[2,2])
+    signif_b1[i]      <- as.numeric(fit_tru[2,4] < 0.05)
+    signif_b1_star[i] <- as.numeric(fit_noz[2,4] < 0.05)
+  }
+  return(data.frame("betas_1" = betas_1,
+                    "betas_1_star" = betas_1_star,
+                    "inside" = inside,
+                    "inside_star" = inside_star,
+                    "signif_b1" = signif_b1,
+                    "signif_b1_star" = signif_b1_star))
+}
+
+N <- 1e3
+sim_04_06 <- mysim(0.4, 0.6, N=N)
+sim_04_12 <- mysim(0.4, 1.2, N=N)
+sim_04_25 <- mysim(0.4, 2.5, N=N)
+sim_11_06 <- mysim(1.1, 0.6, N=N)
+sim_11_12 <- mysim(1.1, 1.2, N=N)
+sim_11_25 <- mysim(1.1, 2.5, N=N)
+
+get_SE <- function(x) sqrt(var(x)/length(x))
+
+row1 <-c(sapply(sim_04_06, mean), "SE_b1"=get_SE(sim_04_06$betas_1), "SE_b1_star"=get_SE(sim_04_06$betas_1_star))
+row2 <-c(sapply(sim_04_12, mean), "SE_b1"=get_SE(sim_04_12$betas_1), "SE_b1_star"=get_SE(sim_04_12$betas_1_star))
+row3 <-c(sapply(sim_04_25, mean), "SE_b1"=get_SE(sim_04_25$betas_1), "SE_b1_star"=get_SE(sim_04_25$betas_1_star))
+row4 <-c(sapply(sim_11_06, mean), "SE_b1"=get_SE(sim_11_06$betas_1), "SE_b1_star"=get_SE(sim_11_06$betas_1_star))
+row5 <-c(sapply(sim_11_12, mean), "SE_b1"=get_SE(sim_11_12$betas_1), "SE_b1_star"=get_SE(sim_11_12$betas_1_star))
+row6 <-c(sapply(sim_11_25, mean), "SE_b1"=get_SE(sim_11_25$betas_1), "SE_b1_star"=get_SE(sim_11_25$betas_1_star))
+
+res_tab <- rbind(row1,row2,row3,row4,row5,row6) |> as.data.frame()
+
+res_tab <- res_tab |> 
+           dplyr::select(betas_1, betas_1_star, SE_b1, SE_b1_star, 
+                         inside, inside_star, signif_b1, signif_b1_star)
+
+row.names(res_tab) <- c("b1=0.4, b2=0.6","b1=0.4, b2=1.2","b1=0.4, b2=2.5",
+                        "b1=1.1, b2=0.6","b1=1.1, b2=1.2","b1=1.1, b2=2.5")
+colnames(res_tab) <- c("b1","b1*","SE b1","SE b1*",
+                       "95% covrge","95% covrge*",
+                       "Power b1", "Power b1*")
+
+# compare with linear model
+mysim_lm <- function(b1, b2, N, star = FALSE) {
+  betas_1_lm   <- rep(0,N)
+  inside_lm    <- rep(0,N)
+  sig_b1_lm    <- rep(0,N)
+  cz <- qnorm(0.975, 0, 1)
+  
+  for(i in 1:N){
+    x <- rbinom(n=n, size=1, prob=0.5)
+    z <- rnorm(n=n, mean=0, sd=1)
+    p <- exp(b0+b1*x+b2*z)/(1 + exp(b0+b1*x+b2*z))
+    y <- rbinom(n=n, size=1, prob=p)
+    if(star == FALSE) {
+      fit_lm <-  lm(y~x+z) |> summary() %>% .$coefficients
+      if(i<10) print("lm(y~x+z)")
+    }
+    else {
+      fit_lm <-  lm(y~x) |> summary() %>% .$coefficients
+    }
+    betas_1_lm[i] <- fit_lm[2,1]
+    inside_lm[i]  <- as.numeric( fit_lm[2,1]-cz*fit_lm[2,2]  < b1 & b1 <  fit_lm[2,1]+cz*fit_lm[2,2])
+    sig_b1_lm[i] <- as.numeric(fit_lm[2,4] < 0.05)
+  }
+  return(data.frame("betas_1_lm" = betas_1_lm,
+                    "inside_lm" = inside_lm,
+                    "signif_b1_lm" = sig_b1_lm))
+}
+
+
+
+get_results_tab <- function(sim1, sim2, sim3, sim4, sim5, sim6, star = FALSE){ 
+  
+  row1 <-c(sapply(sim1, mean), "SE_b1"=get_SE(sim1[,3]))
+  row2 <-c(sapply(sim2, mean), "SE_b1"=get_SE(sim2[,3]))
+  row3 <-c(sapply(sim3, mean), "SE_b1"=get_SE(sim3[,3]))
+  row4 <-c(sapply(sim4, mean), "SE_b1"=get_SE(sim4[,3]))
+  row5 <-c(sapply(sim5, mean), "SE_b1"=get_SE(sim5[,3]))
+  row6 <-c(sapply(sim6, mean), "SE_b1"=get_SE(sim6[,3]))
+  
+  rt <- rbind(row1,row2,row3,row4,row5,row6) |> as.data.frame()
+  
+  rt <- rt[,c(1,4,2,3)] #|> dplyr::select(betas_1_lm, SE_b1_lm, inside_lm, signif_b1_lm)
+  
+  row.names(rt) <- c("b1=0.4, b2=0.6","b1=0.4, b2=1.2","b1=0.4, b2=2.5",
+                     "b1=1.1, b2=0.6","b1=1.1, b2=1.2","b1=1.1, b2=2.5")
+  
+  if(star==TRUE) {
+    colnames(rt) <- c("b1*","SE b1*","95% covrge*","Power b1*")
+  } else {
+    colnames(rt) <- c("b1","SE b1","95% covrge","Power b1")
+  }
+  rt
+}
+
+N <- 1e3
+sim_lm_04_06 <- mysim_lm(0.4, 0.6, N=N, star = FALSE)
+sim_lm_04_12 <- mysim_lm(0.4, 1.2, N=N, star = FALSE)
+sim_lm_04_25 <- mysim_lm(0.4, 2.5, N=N, star = FALSE)
+sim_lm_11_06 <- mysim_lm(1.1, 0.6, N=N, star = FALSE)
+sim_lm_11_12 <- mysim_lm(1.1, 1.2, N=N, star = FALSE)
+sim_lm_11_25 <- mysim_lm(1.1, 2.5, N=N, star = FALSE)
+res_tab_lm_z <- get_results_tab(sim_lm_04_06, sim_lm_04_12, sim_lm_04_25, 
+                                sim_lm_11_06, sim_lm_11_12, sim_lm_11_25, star = FALSE)
+
+N <- 1e3
+sim_lm_04_06 <- mysim_lm(0.4, 0.6, N=N, star = TRUE)
+sim_lm_04_12 <- mysim_lm(0.4, 1.2, N=N, star = TRUE)
+sim_lm_04_25 <- mysim_lm(0.4, 2.5, N=N, star = TRUE)
+sim_lm_11_06 <- mysim_lm(1.1, 0.6, N=N, star = TRUE)
+sim_lm_11_12 <- mysim_lm(1.1, 1.2, N=N, star = TRUE)
+sim_lm_11_25 <- mysim_lm(1.1, 2.5, N=N, star = TRUE)
+res_tab_lm <- get_results_tab(sim_lm_04_06, sim_lm_04_12, sim_lm_04_25, 
+                              sim_lm_11_06, sim_lm_11_12, sim_lm_11_25, star = FALSE)
+
+res_tab_lm
+res_tab_lm_z
+
+
+#~~~~~~~~~~~#
+# Problem 2 #
+#~~~~~~~~~~~#
+
+library(mlbench)
+data(PimaIndiansDiabetes2)
+
+
+# (a)
+# remove records with missing values
+mydata <- PimaIndiansDiabetes2[, c("diabetes","pregnant","glucose","mass","pedigree","age")]
+mydata <- mydata[complete.cases(mydata), ]
+mydata$diabetes <- as.numeric(mydata$diabetes == "pos")
+glimpse(mydata)
+
+# (b)
+# fit the three models
+myformula <- as.formula("diabetes ~ pregnant + glucose + mass + pedigree + age")
+fit_logit   <- glm(myformula, data=mydata, binomial(link="logit"))
+fit_probit  <- glm(myformula, data=mydata, binomial(link="probit"))
+fit_cloglog <- glm(myformula, data=mydata, binomial(link="cloglog"))
+
+get_model_stuff <- function(model) {
+  l <- model$rank
+  even_i <- seq(from=0, by=2, len=l)+2
+  odd_i <- seq(from=1, by=2, len=l)
+  v <- rep(0, 2*l)
+  v[odd_i] <- summary(model)$coefficients[,1] |> as.vector() |> formatC(format="f",digits=2)
+  v[even_i] <- summary(model)$coefficients[,2] |> as.vector() |> formatC(format="f",digits=4)
+  return(v)
+}
+
+tab_b <- data.frame("logit"  = get_model_stuff(fit_logit),
+                    "probit" = get_model_stuff(fit_probit),
+                    "cloglog"= get_model_stuff(fit_cloglog))
+mynames <- rep("",12)
+mynames[seq(from=0, by=2, len=6)+2] <- paste("SE", names(coef(fit_logit)))
+mynames[seq(from=1, by=2, len=6)] <-  names(coef(fit_logit))
+row.names(tab_b) <- mynames
+
+
+## (c)
+tab_c <- tab_b[seq(from=1, by=2, len=6), 1] |> 
+               cbind(as.numeric(tab_b[seq(from=1, by=2, len=6),1]) |> 
+                     exp() |> 
+                     formatC(format="f", digits=2))
+row.names(tab_c) <- names(coef(fit_logit))
+colnames(tab_c) <- c("logit  b", "logit exp(b)")
+
+
+## (d)  
+xseq <- seq(-5, 5, length.out=200)
+X_means_df <- data.frame("pregnant" = median(mydata$pregnant),
+                         "glucose"  = median(mydata$glucose),
+                         "mass"     = median(mydata$mass),
+                         "pedigree" = xseq,
+                         "age"      = median(mydata$age))
+
+fitted_log <- predict(fit_logit,   newdata = X_means_df, se.fit=TRUE, type="response") 
+fitted_cll <- predict(fit_cloglog, newdata = X_means_df, se.fit=TRUE, type="response")
+fitted_pro <- predict(fit_probit,  newdata = X_means_df, se.fit=TRUE, type="response")
+
+
+# Three in same plot
+plot(diabetes~pedigree, data = mydata,
+     ylim=c(0,1),
+     ylab="Probability of Diabetes",
+     xlab="Diabetes Pedigree",
+     xlim=c(-1.5,3.5),
+     main = "Association between pedigree and prevalence of diabetes\nfor three link functions in a binomial model")
+lines(xseq, fitted_log$fit, col="darkgreen")
+lines(xseq, fitted_pro$fit, col="darkorange")
+lines(xseq, fitted_cll$fit, col="darkblue")
+legend("topleft",
+       fill=c("darkgreen","darkblue","darkorange"),
+       col=c("darkgreen","darkblue","darkorange"),
+       bty="n",
+       legend=c("Logistic","Comp log-log","Probit"))
+
+
+#Three plots
+z <- qnorm(0.96) # for 92% confidence intervals
+
+par(mfrow=c(1,3))
+
+# logistic
+plot(diabetes~pedigree, data = mydata,
+     ylim=c(0,1),
+     ylab="Probability of Diabetes",
+     xlab="Diabetes Pedigree",
+     xlim=c(-1,3), main="link=logit")
+lines(xseq, fitted_log$fit, col="darkgreen")
+lines(xseq, fitted_log$fit + z*fitted_log$se.fit, col="darkgreen", lty=2)
+lines(xseq, fitted_log$fit - z*fitted_log$se.fit, col="darkgreen", lty=2)
+
+# cloglog
+plot(diabetes~pedigree, data = mydata,
+     ylim=c(0,1),
+     ylab="Probability of Diabetes",
+     xlab="Diabetes Pedigree",
+     xlim=c(-1,3), main = "link=cloglog")
+lines(xseq, fitted_cll$fit, col="darkblue")
+lines(xseq, fitted_cll$fit + z*fitted_cll$se.fit, col="darkblue", lty=2)
+lines(xseq, fitted_cll$fit - z*fitted_cll$se.fit, col="darkblue", lty=2)
+
+# probit
+plot(diabetes~pedigree, data = mydata,
+     ylim=c(0,1),
+     ylab="Probability of Diabetes",
+     xlab="Diabetes Pedigree",
+     xlim=c(-1,3), main = "link=probit")
+lines(xseq, fitted_pro$fit, col="darkorange")
+lines(xseq, fitted_pro$fit + z*fitted_pro$se.fit, col="darkorange", lty=2)
+lines(xseq, fitted_pro$fit - z*fitted_pro$se.fit, col="darkorange", lty=2)
+mtext("Predicted probabilities and 92% confidence interval", side = 3, line = -1.25, outer = TRUE)
+
+
+# (d) DEPRECATED
+### xseq <- seq(0, 2.5, length.out=100)
+
+#fitted_log <- predict(fit_logit,   newdata = X_means_df, se.fit=TRUE, type="link") 
+#fitted_cll <- predict(fit_cloglog, newdata = X_means_df, se.fit=TRUE, type="link")
+#fitted_pro <- predict(fit_probit,  newdata = X_means_df, se.fit=TRUE, type="link")
+
+# logit
+#lines(xseq, exp(fitted_log$fit)/(1+exp(fitted_log$fit)), col="darkgreen")
+#lines(xseq, exp(fitted_log$fit+z*fitted_log$se.fit)/(1+exp(fitted_log$fit+z*fitted_log$se.fit)), col="darkgreen", lty=2)
+#lines(xseq, exp(fitted_log$fit-z*fitted_log$se.fit)/(1+exp(fitted_log$fit-z*fitted_log$se.fit)), col="darkgreen", lty=2)
+
+# cloglog
+#lines(xseq, 1-exp(-exp(fitted_cll$fit)), col = "darkblue")
+#lines(xseq, 1-exp(-exp(fitted_cll$fit +z*fitted_cll$se.fit)), col = "darkblue", lty=2)
+#lines(xseq, 1-exp(-exp(fitted_cll$fit -z*fitted_cll$se.fit)), col = "darkblue", lty=2)
+
+```

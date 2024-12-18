@@ -1,0 +1,569 @@
+---
+title: "Homework 6"
+author: "Raul Torres Aragon"
+date: "11/01/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(MASS)
+options(scipen=999)
+load("hw6_objects.RData")
+```  
+
+## 1.  
+
+Table 1 reproduce data from Altham (1991) of counts of T4 cells/mm3 in blood samples from 20 patients 
+in remission from Hodgkin’s disease and 20 other patients in remission from disseminated malignancies. 
+The question of interest here is: Is there a difference in the distribution of cell counts between the two diseases? 
+A quantitative assessment of any difference is also required.  
+
+
+## (a)  
+Carry out an exploratory data analysis and provide a summary of the two distributions.  
+
+The following boxplots show the distribution of count of cells by disease. 
+Min, max, and means are displayed on the figure. Notice that individuals with Hodgkin's show 
+a higher mean count of cells on min, mean, max. On the surface it may seem like this difference 
+is statistically significant, but it could very well be driven by the outlier at 2,415.  
+
+
+```{r, echo=FALSE, fig.align='center', out.width="70%"}
+boxplot(data.frame("Non_Hodgkins" = nh, "Hodgkins" = ho),
+        main = "Cell counts\n between two diseases",
+        horizontal = TRUE)
+text(c(mean(nh), min(nh), max(nh), min(ho), max(ho), mean(ho)),  
+     c(rep(0.8,3), rep(1.8,3)),
+     c(mean(nh), min(nh), max(nh), min(ho), max(ho), mean(ho)), 
+     pos = 1, cex = 0.6
+     )  
+points(means, c(1,2), col="steelblue",pch=1, cex=2)
+```  
+
+## (b)  
+We now obtain 90% confidence intervals for differences of means between distributions on 
+the original scale, log transformed, and square root transformed.  
+
+Recall the equation for a 90% confidence interval for a difference in means is:  
+
+$$
+\bigg((\mu_{1}-\mu_2) -\Phi(.05) \sqrt{\frac{\sigma^2_{1}}{n_1}+\frac{\sigma^2_{2}}{n_2}},
+(\mu_{1}-\mu_2) -\Phi(.05) \sqrt{\frac{\sigma^2_{1}}{n_1}+\frac{\sigma^2_{2}}{n_2}}\bigg)
+$$  
+we obtain the variance (after applying the transformation) of each group count via bootstrap, 
+making sure the sampling is separate for the Hodgkin's and the Non Hodgkin's groups.  
+
+The resulting confifence intervals are:  
+
+* original scale: (`r round(CI_orig, 2)`)  
+* log scale: (`r round(CI_log, 2)`)  
+* sqrt scale: (`r round(CI_sqrt, 2)`)  
+
+The considerations have to do with our belief of unequal variance in the data. For example, 
+the log transform can ameliorate heteroscedasticity. If we don't believe heterscedasticity is 
+present in our sample, then we can just assume homoscedasticity and proceed with the original 
+scale.  
+
+## (c)  
+We want to know whether the means across the two groups are different. To test that with 
+different models, we first pull the data to create one dependent variable with all counts. 
+Then, we create a dummy variable to distinguish counts from Hodgkin's patients and non Hodgkin's 
+patients. Finally, we fit three models: (1) poisson, (2) Gamma, and (3) inverse Gaussian, using 
+their respective canonical forms: $X\beta = log(\mu)$, $X\beta = -\mu^{-1}$, and 
+$X\beta = \frac{1}{\mu^2}$.  
+
+Here are the results in their respective link scale, and then in the original scale:  
+
+```{r, echo=FALSE}
+knitr::kable(res_tab, 
+             caption = "Results of three models for count of cells by whether patient has Hodgekins. (link scale)",
+             digits = 4) 
+```  
+
+We now present the same results but "undoing" the link function to recover the original scale.  
+In other words,  
+For Poisson, we exponentiate the coefficients because $\exp(X\beta) = \mu$  
+For Gamma, we take the negative inverse because $-\frac{1}{X\beta} = \mu$  
+For inverse Gaussian we take the positive squared inverse because $\frac{1}{\sqrt{X\beta}} = \mu$.  
+
+
+
+```{r, echo=FALSE}
+knitr::kable(res_tab_undone, 
+             caption = "Results of three models for count of cells by whether patient has Hodgekins. (original scale)",
+             digits = 4) 
+```  
+  
+Recall that the intercept houses the mean count for those without Hodgkin. $\beta_1$ is the 
+difference in cell count between those with Hodgkin's and those without it. Thus, testing whether $\beta_1 = 0$ 
+is synonymous with testing whether there is a statistically significant difference in mean counts. Hence:  
+$H_0: \beta_1 = 0$ while $H_1: \beta_1 \neq 0$.    
+
+## (d)  
+
+Using the asymptotic distribution of the MLE, that is  
+
+$$
+\mathcal{I}(\hat{\beta})^{1/2}(\hat{\beta} - \beta) \to_d \text{N}_2(0,I_2)
+$$  
+we give 90% confidence intervals for each parameter under each of the distributional assumptions. (Poison imposes a log distribution, Gamma imposes a negative inverse, and Inverse Gaussian imposes a squared inverse.  
+
+Recall, the information matrix is obtain from `glm` by `solve(vcov(model))`. 
+It's then easy to construct asymptotic confidence intervals with as follows:  
+
+$$
+\beta_i \pm \Phi(0.95)\times \sqrt{I_{i,i}^{-1}}
+$$  
+
+```{r, echo = FALSE}
+knitr::kable(CI_tab, caption = "90% Confidence interval for each parameter under three models")
+```
+
+Based on the above results, I would conclude that, under Poisson model, there is a 
+significant difference between the mean count of cells among patients with and without Hodgkin's.  
+However, under the Gamma and the Inverse Gaussian model, I would not be so quick to do so given that 
+zero is encompassed by the confidence intervals.  
+
+
+## 2.  
+The data in Table 2, taken from Wakefield et al. (1994), were collected following the 
+administration of a single 30mg dose of the drug Cadralazine to a cardiac failure patient. 
+The response $y_i$ represents the drug concentration at time $x_i$. 
+The most straightforward model for these data is 
+$$
+log(y_i) = \mu(\beta) + \epsilon_i = log\bigg[\frac{30}{V}\exp(-k_ex_i)\bigg] + \epsilon_i
+$$  
+```{r, echo=FALSE}
+knitr::kable(data.frame(x,y))
+```
+
+## (a)  
+
+We now obtain expressions for  
+i) Log-likelihood function:  
+
+Note that we assume $log(y_i) \sim Normal \implies y_i \sim logNormal$, thus we start with the 
+lognormal distribution and compute the loglikelihood function from there. 
+
+$$
+l(\boldsymbol{\beta}, \sigma^2) = 
+-\frac{n}{2} log(2\pi\sigma^2) - \sum_i^n log(y_i)-\frac{1}{2\sigma^2}\sum_{i=1}^n[log(y_i)-log(30/V)+K_ex_i]^2
+$$  
+
+
+ii) Score function  
+The Score function is a vector-valued function of length = 3 given $\beta_0, \beta_1$, and $\sigma^2$.  
+$$
+\mathcal{S}(\boldsymbol{\beta},\sigma^2) =  
+\bigg[\frac{\partial l}{\partial \beta_0},  
+      \frac{\partial l}{\partial \beta_1}, 
+      \frac{\partial l}{\partial \sigma_2},\bigg]
+$$  
+$$
+= \bigg[
+\frac{\sum_{i=1}^n(log(y_i)-\beta_0-\beta_1x_i)}{\sigma^2} ,
+\frac{\sum_{i=1}^n(log(y_i)-\beta_0-\beta_1x_i)x_i}{\sigma^2}, 
+\frac{-n}{\sigma^2} + \frac{\sum_{i=1}^n(ln(y_i)-\beta_0-\beta_1x_i)^2}{(\sigma^2)^2}
+\bigg]  
+$$
+
+
+where $\beta_0 = log(30/V)$, $\beta_1 = -K_e$, and $\sigma^2 = \sigma^2$.  
+
+iii) Expected information matrix $\mathcal{I}(\boldsymbol{\beta},\sigma^2)$  
+$$
+\mathcal{I}(\boldsymbol{\beta},\sigma^2) = -E\bigg( 
+\begin{bmatrix}
+\frac{\partial l}{\partial \beta_0 \beta_0} & 
+\frac{\partial l}{\partial \beta_0 \beta_1} & 
+\frac{\partial l}{\partial \beta_0 \sigma^2} \\
+\frac{\partial l}{\partial \beta_1 \beta_0} & 
+\frac{\partial l}{\partial \beta_1 \beta_1} & 
+\frac{\partial l}{\partial \beta_1 \sigma^2} \\
+\frac{\partial l}{\partial \sigma^2 \beta_0} & 
+\frac{\partial l}{\partial \sigma^2 \beta_1} & 
+\frac{\partial l}{\partial \sigma^2 \sigma^2}
+\end{bmatrix} \bigg)= 
+$$  
+$$
+\begin{bmatrix}
+\frac{n}{\sigma^2}E[log(y_i)] & 
+\frac{\sum_{i=1}^n\sum_{i=1}^nx_i}{\sigma^2}E[log(y_i)] & 
+\frac{n}{(\sigma^2)^2}E[log(y_i)] \\
+\frac{\sum_{i=1}^n\sum_{i=1}^nx_i}{\sigma^2}E[log(y_i)] & 
+\frac{nE[log(y_i)]}{\sigma^2} \sum_{i=1}^n x_i& 
+\frac{\sum_{i=1}^n\sum_{i=1}^nx_i}{(\sigma^2)^2}E[log(y_i)] \\
+\frac{n}{(\sigma^2)^2}E[log(y_i)] & 
+\frac{\sum_{i=1}^n\sum_{i=1}^nx_i}{(\sigma^2)^2}E[log(y_i)]  & 
+\frac{2}{(\sigma^2)^3} [nE(ln(y_i)^2) + n\beta_0E(log(y_i)) +\beta_1E(log(y_i))\sum_{i=1}^nx_1]
+\end{bmatrix}
+$$  
+where $E[log(y_i)]=log(\exp\{\mu_y - \sigma^2/2\})=\mu_y - \sigma^2/2$.
+
+
+## (b)  
+Using `optim` to numerically optimize the log-function for $V, -K_e, \sigma^2$, we get MLEs and their asymptotic 95% confidence intervals:  
+
+```{r, echo=FALSE}
+knitr::kable(Q2b_tab, caption = "MLEs for V, Ke, and sigma^2")
+```
+
+## (c)  
+We now plot the data, along with the fitted curve.  
+
+```{r, echo=FALSE, fig.align='center', out.width="70%"}
+plot(y~x, main = "Cadralazine concentration at 8 given times", xaxt='n')
+lines(exp(b0-b1*x_grid), col = "steelblue", lty=1, lwd=3)
+axis(1,at=x,labels=x)
+```
+
+## (d)  
+Using residuals, we examine the appropriateness of the assumptions of the above model. 
+And answer the question: Does the model seem reasonable for these data?  
+
+To examine the assumption of equal variance (homoscedasticty) we plot residuals against 
+fitted values.  
+```{r, echo=FALSE, fig.align='center', out.width="70%"}
+par(mfrow = c(1,2))
+plot(r~yhat, 
+     main = "residual-fitted plot", 
+     xlab = "time", ylab = "residual",
+     xaxt="n")
+axis(1,at=x,labels=x)
+plot(std_r~yhat,
+     main = "std residuals-fitted plot",
+     ylab = "std residuals")
+```
+
+Next, we examine the assumption of no correlation among error terms. This time, we plot 
+residuals against lag(1) residuals. 
+```{r, echo=FALSE, fig.align='center', out.width="70%"}
+acf(r, main = "Autocorrelation plot for residuals")
+```  
+
+Finally, given our small sample, we want to determine whether the residuals are normally 
+distributed. The following QQ-plot compares the distribution of our residuals with theoretical 
+quantiles of a normal distribution.    
+
+```{r, echo=FALSE, out.width="70%"}
+qqnorm(r, pch = 1, frame = FALSE)
+qqline(r, col = "steelblue", lwd = 2)
+```
+
+The model does not seem to be a great fit for these data because it t consistently 
+underestimates the cell count as shown in (c). Furthermore, the residual plots seem to 
+suggest variance is not constant. There does seem to be a megaphone pattern growing at 
+later times (ignoring the outlier). There does not seem to be correlation between residual 
+terms, though, the sample size may be too small to get a fairer assessment. The correlation 
+between $r_t$ and $r_{t-1}$ is `r round(cor(r[2:8], dplyr::lag(r)[2:8]),2)`, which does not seem very 
+strong. The residuals do seem to be normally distributed, so with the exception of 
+equal variance, the LR assumptions seem to hold.  
+
+## (e)  
+The clearance $Cl = V \times K_e$ and elimination half-life $x_{1/2} = log(2)/K_e$ are 
+parameters of interest in this experiment.  
+We find the MLEs of these parameters along with asymptotic 95% confidence intervals.  
+
+$\hat{Cl} = \hat{V}\hat{K_e}$ and 
+$\hat{x}_{1/2} = log(2)/\hat{K_e}$  
+
+To construct a confidence interval, we need the asymptotic variance, which we obtain via 
+Delta Method.  
+Notice Cl is a function of two parameters, namely V and Ke. By the Delta Method,  
+
+$$
+var(Cl) = \nabla l(V, K_e)^T I(V,K_e)^{-1}\nabla l(V,K_e)
+$$  
+where $\nabla l(K_e, V)=$  
+
+$$
+\bigg[
+-\frac{K_e}{\sigma^2} \sum_{i=1}^n(log(y_i) - log(30/V) + K_ex_i), 
+-\frac{1}{\sigma^2V} \sum_{i=1}^n(log(y_i) -log(30/V) + K_ex_i)
+\bigg]
+$$  
+and $\mathcal{I}(K_e, V)=$  
+$$
+-E\bigg(\begin{bmatrix}
+\frac{\partial l}{\partial K_e K_e} & -\frac{\partial l}{\partial K_eV} \\
+-\frac{\partial l}{\partial VK_e} & \frac{\partial l}{\partial VV}]
+\end{bmatrix} \bigg)
+$$  
+
+$$
+-E\bigg(
+\begin{bmatrix}
+\frac{1}{\sigma^2}\sum_{i=1}^n[-log(y_i)+log(30/V) -2K_ex_i] & -\frac{-K_e}{\sigma^2V} \\
+-\frac{-K_e}{\sigma^2V} & \frac{1}{\sigma^2V^2}\sum_{i=1}^n[K_ex_i-log(30/V)+log(y_i)-1]
+\end{bmatrix} \bigg)
+$$  
+$$
+\begin{bmatrix}
+-\frac{n\mu}{\sigma^2} - \frac{n}{2} & 0 \\
+0 & -\frac{1}{V^2}(\frac{n\mu}{\sigma^2} + \frac{n}{2})
+\end{bmatrix}
+$$
+
+and for the half-life we have (by the single variable Delta Method):    
+$$
+var(x_{1/2}) = \bigg(\frac{\partial l(K_e,V)}{\partial K_e}\bigg)^2 \times \mathcal{I}(K_e,V)_{[1,1]}^{-1}
+$$  
+$$  
+\bigg(-\frac{K_e}{\sigma^2} \sum_{i=1}^n(log(y_i) - log(30/V) + K_ex_i)\bigg)^2 \times \frac{1}{-\frac{n\mu}{\sigma^2} - \frac{n}{2}}
+$$  
+
+where $\mu = \exp\{log(30/V) \exp(-K_ex_i))\}$ since $y_i \sim \text{lognormal}(log(30/V)\exp\{-K_ex_i\}, (\exp(\sigma^2)-1)\exp(2[log(30/V)\exp\{-K_ex_i\}]\sigma^2))$.  
+
+With the MLE estimates and the variance of each estimate, we can construct confidence 
+interval as follows:  
+$$
+\hat{\theta}_{MLE} \pm \Phi(0.95)\times \sqrt{var(\hat{\theta})}
+$$  
+where $\hat{\theta}$ is our estimate.  
+
+```{r, echo=FALSE}
+mytab <- data.frame(param = round(c(Cl_mle, xhalf_mle),1),
+                    conf_int = c(CI_cl, CI_xhalf))
+colnames(mytab) <- c("MLE estimate", "95% conf interval")
+row.names(mytab) <- c("clearance","half-life")
+knitr::kable(mytab, caption = "MLE for two parameters of interest")
+
+```
+
+* Cl = `r CI_cl`  
+* $x_{1/2}$ = `r CI_xhalf`  
+
+## Apendix  
+```{}
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# student: Raul
+# course: STAT 570
+# assignment: hw6
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+rm(list=ls())
+library(tidyverse)
+library(dplyr)
+
+
+nh <-c(375,	375,	752,	208,	151,	116,	736,	192,	315,	1252,	675,	700,	440,	771,	
+       688,	426,	410,	979,	377,	503)
+ho <-c(396,	568,	1212,	171,	554,	1104,	257,	435,	295,	397,	288,	1004,	431,	795,	
+       1621,	1378,	902,	958,	1283,	2415)
+
+
+#~~~~~~~~~~~#
+# Problem 1 # 
+#~~~~~~~~~~~#
+
+## (a)
+means <- c(mean(nh), mean(ho))
+boxplot(data.frame("Non_Hodgkins" = nh, "Hodgkins" = ho),
+        main = "Cell counts\n between two diseases",
+        horizontal = TRUE)
+text(c(mean(nh), min(nh), max(nh), min(ho), max(ho), mean(ho)),  
+     c(rep(0.8,3), rep(1.8,3)),
+     c(mean(nh), min(nh), max(nh), min(ho), max(ho), mean(ho)), 
+     pos = 1, cex = 0.5)  
+points(means, c(1,2), col="red",pch=1, cex=2)
+
+
+## (b)  
+get_bootstrap_var <- function(x, N) {
+    B <- rep(0, N) 
+    for(i in 1:N) {
+        B[i] <- sample(x, size = length(x), replace = TRUE) |> var()
+    }
+    var <- mean(B)
+    var
+}
+N <- 1e3
+get_CI <- function(x1, x2, level = .90, scale = "orig") {
+  if(scale == "log") {
+    x1 <- log(x1); x2 <- log(x2)
+  } else if(scale == "sqrt") {
+    x1 <- sqrt(x1); x2 <- sqrt(x2)
+  } else {
+    TRUE
+  }
+  var1 <- get_bootstrap_var(x1, N=1e3)
+  var2 <- get_bootstrap_var(x2, N=1e3)
+  Phi <- abs(qnorm((1-level)/2, mean = 0, sd = 1))
+  ci_lo <- mean(x1)-mean(x2) - Phi*sqrt(var1/length(x1) + var2/length(x2))
+  ci_hi <- mean(x1)-mean(x2) + Phi*sqrt(var1/length(x1) + var2/length(x2))
+  return(c(ci_lo, ci_hi))
+}
+
+CI_orig <- get_CI(ho, nh, level = 0.90, scale = "orig")
+CI_log  <- get_CI(ho, nh, level = 0.90, scale = "log")
+CI_sqrt <- get_CI(ho, nh, level = 0.90, scale = "sqrt")
+
+
+## (c)  
+data <- data.frame("count" = c(nh, ho), 
+                   "hodgkins" = c(rep(0,length(nh)), rep(1,length(ho))))
+
+fit_pois <- glm(count~hodgkins, family=poisson(link="log"), data=data)
+fit_gamm <- glm(count~hodgkins, family=Gamma(link="inverse"), data=data) 
+fit_invg <- glm(count~hodgkins, family=inverse.gaussian(link="1/mu^2"), data=data)
+
+coef_pois <- summary(fit_pois)$coefficients |> as.data.frame()
+coef_gamm <- summary(fit_gamm)$coefficients |> as.data.frame()
+coef_invg <- summary(fit_invg)$coefficients |> as.data.frame()
+
+res_tab <- data.frame(
+  "Intercept"    = c(coef_pois$Estimate[1], coef_gamm$Estimate[1], coef_invg$Estimate[1]),
+  "SE_Intercept" = c(coef_pois$`Std. Error`[1], coef_gamm$`Std. Error`[1], coef_invg$`Std. Error`[1]),
+  "Beta1"        = c(coef_pois$Estimate[2], coef_gamm$Estimate[2], coef_invg$Estimate[2]), 
+  "SE_Beta1"     = c(coef_pois$`Std. Error`[2], coef_gamm$`Std. Error`[2], coef_invg$`Std. Error`[2])
+  )
+row.names(res_tab) <- c("Poisson","Gamma","InverseGaussian")
+
+undo_gamma <- function(x) { -1/x }
+undo_invg  <- function(x) { 1/sqrt(x) }
+
+coef_pois_undone <- fit_pois$coefficients[,1] |> exp() |> as.data.frame()
+coef_gamm_undone <- fit_gamm$coefficients[,1] |> undo_gamma() |> as.data.frame()
+coef_invg_undone <- fit_invg$coefficients[,1] |> abs() |> undo_invg() |> as.data.frame()
+
+res_tab_undone <- data.frame(
+  "Intercept"    = c(coef_pois_undone[1,1], coef_gamm_undone[1,1], coef_invg_undone[1,1]),
+  "Beta1"        = c(coef_pois_undone[2,1], coef_gamm_undone[2,1], coef_invg_undone[2,1]) 
+)
+row.names(res_tab_undone) <- c("Poisson","Gamma","InverseGaussian")
+
+
+
+## (d)  
+I_pois <- solve(vcov(fit_pois))
+I_gamm <- solve(vcov(fit_gamm))
+I_invg <- solve(vcov(fit_invg))
+
+get_CI_model <- function(theta, I_jj) {
+  r <- c(theta - qnorm(0.95)*sqrt(1/I_jj), theta + qnorm(0.95)*sqrt(1/I_jj))
+  r
+}
+
+CI_b0_pois <- get_CI_model(coef_pois[1,1], I_pois[1,1])
+CI_b1_pois <- get_CI_model(coef_pois[2,1], I_pois[2,2])
+
+CI_b0_gamm <- get_CI_model(coef_gamm[1,1], I_gamm[1,1])
+CI_b1_gamm <- get_CI_model(coef_gamm[2,1], I_gamm[2,2])
+
+CI_b0_invg <- get_CI_model(coef_invg[1,1], I_pois[1,1])
+CI_b1_invg <- get_CI_model(coef_invg[2,1], I_pois[2,2])
+
+
+CI_tab <- data.frame("intercept" = c(paste0(round(CI_b0_pois, 3), collapse = " to "), 
+                                     paste0(round(CI_b0_gamm, 3), collapse = " to "),
+                                     paste0(round(CI_b0_invg, 3), collapse = " to ")),
+                     "b1" = c(paste0(round(CI_b1_pois, 3), collapse = " to "), 
+                              paste0(round(CI_b1_gamm, 3), collapse = " to "),
+                              paste0(round(CI_b1_invg, 3), collapse = " to "))
+           )
+
+row.names(CI_tab) <- c("Poisson","Gamma","InverseGaussian")
+
+
+
+
+#~~~~~~~~~~~#
+# Problem 2 # 
+#~~~~~~~~~~~#
+
+x <- c(seq(from = 2, to = 10, by = 2), 24, 28, 32)
+
+y <- c(1.63, 1.01, 0.73, 0.55, 0.41, 0.01, 0.06, 0.02)
+
+## a
+## b
+
+my_likelihood <- function(theta) {
+  b0 <- log(30/theta[1])
+  b1 <- theta[2]
+  n <- length(x)
+  sigma2 <- theta[3]
+  -n/2 * log(2*pi*sigma2) -sum(log(y)) -(1/(2*sigma2))*sum( (log(y) -b0+b1*x)^2 ) 
+}
+params <- optim(par = c(1,1,1), fn = my_likelihood, control = list(fnscale = -1))$par
+
+V <-params[1]; Ke <- params[2]; sigma2 <- params[3]
+
+
+# TO DO
+I <- matrix(1, ncol=3, nrow=3)
+
+q975 <- qnorm(.975, 0, 1)
+ci_V <- c(V-q975*sqrt(I[1,1]), V+q975*sqrt(I[1,1])) |> round(2)
+ci_Ke <- c(Ke-q975*sqrt(I[2,2]), Ke+q975*sqrt(I[2,2]))  |> round(2)
+ci_sigma2 <- c(sigma2-q975*sqrt(I[3,3]), sigma2+q975*sqrt(I[3,3]))  |> round(2)
+
+confidence_intervals <- c(paste0(ci_V, collapse = " to "),
+                          paste0(ci_Ke,collapse = " to "),
+                          paste0(ci_sigma2, collapse = " to "))
+
+Q2b_tab <- data.frame(round(params,2), confidence_intervals)
+row.names(Q2b_tab) <- c("V", "-Ke", "sigma2")
+colnames(Q2b_tab) <- c("parameter", "95% conf interval")
+
+
+## (c)  
+#We now plot the data, along with the fitted curve.  
+b0 <- log(30/V)
+b1 <- Ke
+x_grid <- seq(from = 2, to = 33, by = 1)
+plot(y~x, main = "Cadralazine concentration at 8 given times", xaxt='n')
+lines(exp(b0-b1*x_grid), lty=1, lwd=3)
+axis(1,at=x,labels=x)
+
+## (d)  
+#Using residuals, we examine the appropriateness of the assumptions of the above model. 
+#And answer the question: Does the model seem reasonable for these data?  
+yhat <- exp(b0-b1*x)
+r <- y - exp(b0-b1*x)
+std_r <- (y - yhat) / sqrt(sigma2)
+#hist(r, breaks = 13)
+
+
+## (e)  
+#The clearance Cl = V * K_e and elimination half-life x_{1/2} = log(2/K_e) are 
+#parameters of interest in this experiment.  
+#We find the MLEs of these parameters along with asymptotic 95% confidence intervals. 
+
+Cl_mle <- V*Ke
+xhalf_mle <- log(2)/Ke 
+n <- length(x)
+
+Mu <- exp(log(30/V*exp(Ke*x))) |> mean()
+
+dKe <- sum(-log(y) + log(30/V) -2*Ke*x)/sigma2
+dV <- sum(Ke*x -log(30/V) +log(y) -1)/(sigma2*V^2)
+I_11 <- n*(Mu+sigma2/2)/sigma2
+I_22 <- n*(Mu+sigma2/2)/(sigma2*V^2)
+I_21 <- 0
+
+grad_loglike <- matrix(c(dKe,dV), ncol=2, nrow=1)
+FIM <- matrix(c(I_11, I_21, I_21, I_22), nrow=2, ncol=2)
+
+var_Cl <- grad_loglike %*% solve(FIM) %*% t(grad_loglike)
+var_xhalf <- dKe^2 * 1/I_22
+
+CI_cl <- paste0(c(Cl_mle - qnorm(0.975)*sqrt(var_Cl), 
+                  Cl_mle + qnorm(0.975)*sqrt(var_Cl)) |> round(3),
+                collapse = " to ")
+
+CI_xhalf <- paste0(c(xhalf_mle - qnorm(0.975)*sqrt(var_xhalf), 
+                     xhalf_mle + qnorm(0.975)*sqrt(var_xhalf)) |> round(3),
+                     collapse = " to ")
+```
+
+
+
+
+
+
+
