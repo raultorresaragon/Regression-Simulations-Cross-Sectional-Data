@@ -1,0 +1,256 @@
+---
+title: <center> <h1>Homework 1</h1> </center>
+author: "Raul Torres Aragon"
+date: "10/6/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Computation part
+
+```{r comppart, include = FALSE}
+library(gamlss.data)
+library(tidyverse)
+data(usair)
+
+# Question 1: computation
+# ~~~~~~~~~~~~~~~~~~~~~~~
+data <- usair
+data$intercept <- 1
+X <- data[, c(8, 2:7)] |> as.matrix()
+y <- as.matrix(data[,1])
+
+XX_inv <- solve(t(X)%*%X)
+beta <- XX_inv %*% t(X) %*% y
+
+res <- y -(X %*% beta)
+rss <- sum(res^2) 
+df <- nrow(X) - ncol(X)
+sigma <- rss/df
+vcovar <- sigma * XX_inv
+beta_SE <- diag(vcovar) |> sqrt()
+
+tvals <- (beta-0)/beta_SE
+alpha <- 0.05
+pvals <- 2*pt(-abs(tvals),df=df)
+
+rse <- sqrt(rss/df)
+```
+
+We want to replicate the least-squares output from the `lm` function in R, but we want to do it by hand.  
+Firs we start with the data set `air` which contains 41 rows and 7 columns with zero missing values. This can be split into two matrices: $\boldsymbol{y}$ a $41\times 1$ matrix, and $X$ a $41\times 6$ matrix. We then expand $X$ to include a vector column of 1s that will serve as the intercept vector. It's all linear algebra from here on.  
+
+$$
+\boldsymbol{\hat{\beta}} = (X^TX)^{-1}X^T\boldsymbol{y} \\
+$$  
+
+
+Next, we compute the residual sum of squares as follows:  
+
+$$
+RSS = \sum_1^{41}(\boldsymbol{y} - \boldsymbol{\hat{\beta}}X)^2  
+$$  
+
+$\sigma$ for the regression can then be estimated using RSS and the degrees of freedom, which equal the number of observations minus the number of covariates minus 1 for the intercept.  
+
+$$
+\hat{\sigma} = \frac{RSS}{41-6-1}
+$$  
+
+To obtain the standard errors, we square the diagonal elements of the variance covariance matrix $SEs = \hat{\sigma}(X^TX)^{-1}$.  
+
+
+
+Once we have the standard errors, we can compute the critical t values when comparing against a null $\boldsymbol{\beta^{'}} = \boldsymbol{0}$, thus  
+
+$$
+\text{tvalues} = (\boldsymbol{\hat{\beta}} - \boldsymbol{0})\times{SEs^{-1}} 
+$$  
+
+
+
+
+Next, to reproduce the pvalues, we compute the probability of observing a critical t value for the given degrees of freedom. We use the CDF of the T distribution. `2*pt(-abs(tvals),df=df)`.  
+
+
+Finally, to compute the residual standard error we use the RSS and the degrees of freedom.
+$$
+RSE = \sqrt{\frac{RSS}{df}}
+$$  
+Putting it all together we have:  
+
+```{r echo = FALSE}
+tibble(" " = c("Intercept","x1","x2","x3","x4","x5","x6"),
+       "Estimate" = as.vector(beta),
+       "Std.Error" = as.vector(t(beta_SE)),
+       "t value" = as.vector(tvals),
+       "Pr(>|t|)"= as.vector(pvals)) |> knitr::kable()
+```  
+
+Residual standard error `r round(rse,2)`  on  `r df` degrees of freedom.  
+
+## Interpretation part  
+
+#### 1. Based on the fitted model, provide an informative plot that summarizes the association between SO2 level and 6 covariates.  
+
+
+```{r plots, echo = FALSE}
+par(mfrow = c(2,3))
+plot(X[,2], y, 
+     xlab = "avg. annual temperature (F)", 
+     ylab = "observed SO2 values")
+abline(beta[1], beta[2])
+
+plot(X[,3], y, 
+     xlab = "# manufacturers employing > 20 workers", 
+     ylab = "observed SO2 values")
+abline(beta[1], beta[3])
+
+plot(X[,4], y, 
+     xlab = "population size in 1000s", 
+     ylab = "observed SO2 values")
+abline(beta[1], beta[4])
+
+plot(X[,5], y, 
+     xlab = "avg. annual wind speed in miles per hour", 
+     ylab = "observed SO2 values")
+abline(beta[1], beta[5])
+
+plot(X[,6], y, 
+     xlab = "avg. annual rainfall in inches", 
+     ylab = "observed SO2 values")
+abline(beta[1], beta[6])
+
+plot(X[,7], y, 
+     xlab = "avg. number of days of rainfall per year", 
+     ylab = "observed SO2 values")
+abline(beta[1], beta[7])
+
+mtext("Linear association between SO2 level and a given metric", side = 3, line = -2, outer = TRUE)
+
+```  
+
+On x-axis of each plot we see each metric or variable (such as population size). On the y-axis of each plot is the SO2 level. The line represent the association the linear regression model derived for all the metrics simultaneously. For some metrics the points do seem to flow with the line--e.g. avg. annual temperature. For other metrics the line misses all the points (e.g. avg. annual rainfall in inches). 
+
+#### 2. Give interpretations of each of the parameters $\beta_j$.  
+
+From this regression we can say that a one degree Fahrenheit increase in average annual temperature is associated with a -1.3 decrease in SO2. This result is barely statistical significant, meaning that if we were to replicate this exercise 20 times with a new sample each time, we'd see a similar result about once--so, uncommon, but not that uncommon.  
+
+Adding one more manufacturer employing more than 20 workers is associated with in increase of 0.07 SO2 level. This results is also statistically significant, but if we were to replicate this exercise 5000 times, with a new sample each time, for us to see a result like this--so a lot rarer.  
+
+Adding a thousand more breathing people across our cities would be associated with a decrease of 0.04 SO2 level. This result is also statistically significant. 
+
+A more sizable association in the reduction of SO2 levels is in the average wind speed. An increase of average wind speed of about 1 mile per hour is associated with a reduction of 3.2 SO2 level, but this result could have been a fluke given that it as we repeat this experiment as mentioned above, we would expect to see a result like this in about 10 trials. 
+
+Rainfall does not seem to be meaningfully associated with levels of SO2. On the one hand, a one-inch increase in average annual rainfall is associated with an increase in SO2 (not statistically significant--i.e. could be a fluke); but on the other hand, an one-day increase in the number of rainfall days per year is associated with a *decrease* in SO2. So the two findings are in opposition with each other, but again, they are not statistically significant.  
+
+## Assumptions part  
+State the assumptions needed to validate each of the following:  
+
+
+#### 1. An unbiased estimate of $\beta_j$  
+We assume that the conditional expectation function is linear, meaning $E[X|Y] = X\beta$
+(which is would give the property of $E[\epsilon|X] = E[\epsilon] = 0$).  
+We assume $X^TX$ is of full rank.
+
+#### 2. An accurate estimate of the standard error of $\beta_j$    
+We assume constant variance $\sigma$, i.e. homoscedasticity, which means the diagonal elements in the varcovar matrix are constant.  
+We assume $X^TX$ is of full rank.  
+We assume the errors are independent which means the off-diagonal elements of the varcovar matrix are zero.
+
+#### 3. Accurate coverage probabilities for 100(1-$\alpha$)% confidence intervals of the form 
+$\hat{\beta_j} \pm \hat{\text{var}}(\hat{\beta_j})^{1/2} \times t_{n-4}(1-\alpha /2)$  
+We assume the variance $\sigma$ constant.  
+We assume $X^TX$ is of full rank.
+We assume the errors are independent and identically distributed.   
+
+#### 4. Accurate coverage probabilities for 100(1-$\alpha$)% confidence intervals of the form 
+$\hat{\beta_j} \pm \hat{\text{var}}(\hat{\beta_j})^{1/2} \times t_{n-4}(1-\alpha /2)$  
+
+All the assumptions in 1)  
+We assume that our variance estimate $\hat{\sigma}$ is consistent, meaning that as the sample size grows large we narrow in on the true value of $\sigma$.     
+We assume the errors are independent and identically (normally) distributed.  
+
+#### 5. An accurate prediction for an observed outcome $x = x_0$  
+
+All the assumotion if 1), but instead of $E[Y|X] = 0$ we assume $E[Y|x_0] = x_0 \beta$
+We assume the true functional form of the model is linear and correctly specified. In other words we assume that the conditional expectation function is indeed linear, and we have not omitted any variables or added redundant ones. Then, anything that can be explained in the variation of $y$ has been accounted for, and any deviation in our prediction is due to chance.  
+
+## Appendix 
+```{}
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Author: Raul Torres Aragon
+# Date: 2022-09-06
+# Assignment: Stat 570 hw1
+# Notes:
+#
+#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+rm(list = ls())
+library(tidyverse)
+library(gamlss.data)
+data(usair)
+
+# Computation: Question 1
+# ~~~~~~~~~~~~~~~~~~~~~~~
+data <- usair
+data$intercept <- 1
+X <- data[, c(8, 2:7)] |> as.matrix()
+y <- as.matrix(data[,1])
+
+XX_inv <- solve(t(X)%*%X)
+beta <- XX_inv %*% t(X) %*% y
+
+res <- y -(X %*% beta)
+rss <- sum(res^2) 
+df <- nrow(X) - ncol(X)
+sigma <- rss/df
+vcovar <- sigma * XX_inv
+beta_SE <- diag(vcovar) |> sqrt()
+
+tvals <- (beta-0)/beta_SE
+alpha <- 0.05
+pvals <- 2*pt(-abs(tvals),df=df)
+
+rse <- sqrt(rss/df)
+
+
+# Interpretation: Question 1
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~
+par(mfrow = c(2,3))
+plot(X[,2], y, 
+     xlab = "avg. annual temperature (F)", 
+     ylab = "observed SO2 values")
+abline(beta[1], beta[2])
+
+plot(X[,3], y, 
+     xlab = "# manufacturers employing > 20 workers", 
+     ylab = "observed SO2 values")
+abline(beta[1], beta[3])
+
+plot(X[,4], y, 
+     xlab = "population size in 1000s", 
+     ylab = "observed SO2 values")
+abline(beta[1], beta[4])
+
+plot(X[,5], y, 
+     xlab = "avg. annual wind speed in miles per hour", 
+     ylab = "observed SO2 values")
+abline(beta[1], beta[5])
+
+plot(X[,6], y, 
+     xlab = "avg. annual rainfall in inches", 
+     ylab = "observed SO2 values")
+abline(beta[1], beta[6])
+
+plot(X[,7], y, 
+     xlab = "avg. number of days of rainfall per year", 
+     ylab = "observed SO2 values")
+abline(beta[1], beta[7])
+
+mtext("Linear association between SO2 level and metric", side = 3, line = -2, outer = TRUE)
+
+```

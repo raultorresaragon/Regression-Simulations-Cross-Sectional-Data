@@ -1,0 +1,1097 @@
+---
+title: "Final"
+author: "Raul Torres Aragon"
+date: "2022-12-05"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(scipen=999)
+library(ggplot2)
+library(ggpubr)
+load("final_objects.RData")
+```
+
+
+Consider the cycle to pregnancy data in Table 1. These data are from a study described in 
+Baird and Wilcox (1985) in which women with planned pregnancies were interviewed and asked 
+how many cycles it took them to get pregnant. Women were classified as current smokers if 
+they reported smoking at least an average of 1 cigarette a day during the first cycle they 
+were trying to get pregnant.  
+
+```{r, echo=FALSE, fig.align = 'center', out.width="65%"}
+knitr::include_graphics("table1.png")
+```
+
+We will begin by describing a model for a single group only.  
+
+## Problem 1  
+
+We describe a simple model for these data. Let p (0 < p < 1) denote the probability of 
+conception during a particular cycle, and T the random variable describing the cycle at 
+which pregnancy was achieved. Then T may be modeled as a geometric random variable:  
+
+```{r, echo=FALSE, fig.align = 'center', out.width="39%"}
+knitr::include_graphics("Eq1.png")
+```  
+Let $Y_t$ represent the number of women that conceive in cycle $t$, $t = 1,\dots,N$, and 
+$Y_{N+1}$ the number of women that have not conceived by cycle N.  
+
+## (a)  
+Show that the likelihood function is,  
+$$
+L(p) = \bigg (\prod_{T=1}^N [p(1-p)^{t-1}]^{Y_t}\bigg) \times [(1-p)^N]^{Y_{N+1}}
+$$  
+There are $Y_1$ women who conceived in $t=1$. Assuming independence, the likelihood of that 
+happening is  
+$$
+\underbrace{p(1-p)^{1-1}}_1 \times \underbrace{p(1-p)^{1-1}}_2 \times \dots \times \underbrace{ p(1-p)^{1-1}}_{Y_1} = 
+[p(1-p)^{1-1}]^{Y_1}
+$$  
+Similarly, there are $Y_2$ women who conceived in $t=2$. Again, assuming independence, the 
+likelihood of that happening is  
+$$
+\underbrace{p(1-p)^{2-1}}_1 \times \underbrace{p(1-p)^{2-1}}_2 \times \dots \times \underbrace{p(1-p)^{2-1}}_{Y_2} = 
+[p(1-p)^{2-1}]^{Y_2}
+$$  
+We proceed similarly until $Y_N$, the number of women who conveiced in time period $t=N$.  
+$$
+\underbrace{p(1-p)^{N-1}}_1 \times \underbrace{p(1-p)^{N-1}}_2 \times \dots \times \underbrace{ p(1-p)^{N-1}}_{Y_N} = 
+[p(1-p)^{N-1}]^{Y_N}
+$$  
+Hence, the likelihood of the women who conceived between time periods $t=1$ and $t=N$ is  
+$$
+\bigg (\prod_{T=1}^N [p(1-p)^{t-1}]^{Y_t}\bigg)
+$$  
+Now, for the $Y_{N+1}$ women who did not conceive at all in the $N$ time periods. The 
+likelihood of that happening is  
+$$
+\underbrace{(1-p)^N}_1 \times \underbrace{(1-p)^N}_2 \times \dots \times \underbrace{(1-p)^N}_{Y_{N+1}} = 
+[(1-p)^N]^{Y_{N+1}}
+$$  
+Hence, the likelihood function we're after is  
+$$
+L(p) = \bigg (\prod_{T=1}^N [p(1-p)^{t-1}]^{Y_t}\bigg) \times [(1-p)^N]^{Y_{N+1}}
+$$  
+
+## (b)  
+Find the expression for the MLE, $\hat{p}$.  
+
+To find $\hat{p}_{MLE}$, we first obtain the log-likelihood, derive with respect to $p$, 
+set equal to zero, and solve for $p$. We now show the log-likelihood function:  
+
+$$
+\begin{aligned}
+l(p) &= \log[L(p)] \\   
+&= \log\bigg[ \bigg (\prod_{T=1}^N [p(1-p)^{t-1}]^{Y_t}\bigg) \times [(1-p)^N]^{Y_{N+1}} \bigg] \\
+&= \log\bigg( [p(1-p)^{t-1}]^{\sum_{t=1}^N Y_t} \times [(1-p)^{NY_{N+1}}] \bigg) \\
+&= \log \bigg( p^{\sum_{t=1}^N Y_t} \bigg) + \log \bigg((1-p)^{\sum_{t=1}^NY_t(t-1)} \bigg) + \log \bigg( (1-p)^{NY_{N+1}} \bigg) \\
+&= \sum_{t=1}^NY_t\times\log(p) + \sum_{t=1}^NY_t(t-1) \times \log(1-p) + NY_{N+1}\log(1-p)
+\end{aligned}
+$$  
+Taking the derivative with respect to p, we get:  
+$$
+\frac{\partial l(p)}{p} = 
+\frac{1}{p}\sum_{t=1}^NY_t - \frac{1}{(1-p)}\sum_{t=1}^NY_t(t-1)  - \frac{1}{(1-p)}NY_{N+1}
+$$  
+Setting $\frac{\partial l(p)}{p}$ to zero and solving for p to obtain the MLE estimate for 
+$p$, aka $\hat{p}$:  
+
+$$
+\begin{aligned}
+S(\hat{p}) &= \frac{\partial l(p)}{p} := 0 \\
+&\implies \frac{1}{p}\sum_{t=1}^NY_t - \frac{1}{(1-p)}\bigg[ NY_{N+1} + \sum_{t=1}^N Y_t(t-1)\bigg] = 0 \\
+&\implies \frac{1}{p}\sum_{t=1}^NY_t = \frac{1}{(1-p)}\bigg[ NY_{N+1} + \sum_{t=1}^N Y_t(t-1)\bigg] \\
+&\implies \frac{1-p}{p} = \frac{NY_{N+1} + \sum_{t=1}^N Y_t(t-1)}{\sum_{t=1}^NY_t} \\
+&\implies \sum_{t=1}^NY_t-p\sum_{t=1}^NY_t = p\bigg[ NY_{N+1} + \sum_{t=1}^N Y_t(t-1)\bigg] \\
+&\implies \sum_{t=1}^NY_t = p\bigg( [NY_{N+1} + \sum_{t=1}^N Y_t(t-1)] + \sum_{t=1}^NY_t\bigg) \\
+&\implies \hat{p}_{mle} = \frac{\sum_{t=1}^NY_t}{NY_{N+1} + \sum_{t=1}^N Y_t(t-1) + \sum_{t=1}^NY_t}
+\end{aligned}
+$$  
+
+## (c)  
+Find the form of the observed information and hence the asymptotic variance of the MLE.  
+
+To get the *theoretical* information, we take the expectation of the second-derivative (with 
+respect to $p$) of the log-likelihood with respect to T, the random variable of interest.  
+
+$$
+\begin{aligned}
+\mathcal{I}_p &= -E\bigg[ \frac{\partial^2 l(p)}{p^2} \bigg] \\
+&= -E\bigg[ -\frac{1}{p^2}\sum_{t=1}^NY_t
+            -\frac{1}{(1-p)^2} \sum_{t=1}^NY_t(t-1) 
+            -\frac{1}{(1-p)^2} NY_{N+1} \bigg] \\
+&= E\bigg[ \frac{1}{p^2}\sum_{t=1}^NY_t
+           + \frac{1}{(1-p)^2} \sum_{t=1}^NY_t(t-1) 
+           + \frac{1}{(1-p)^2} NY_{N+1} \bigg] \\
+&= E\bigg[ \frac{\sum_{t=1}^NY_t}{p^2}\bigg] +  
+   E\bigg[ \frac{\sum_{t=1}^NY_t(t-1)}{p^2} \bigg] + 
+   E\bigg[ \frac{NY_{N+1}}{(1-p)^2} \bigg] \\
+&= \frac{\sum_{t=1}^NY_t}{p^2} + \frac{NY_{N+1}}{(1-p)^2} + \frac{1}{(1-p)^2}E\bigg[\sum_{t=1}^NY_t(t-1)\bigg] \\
+&= \frac{\sum_{t=1}^NY_t}{p^2} + \frac{NY_{N+1}}{(1-p)^2} +
+   \frac{1}{(1-p)^2} \bigg[ Y_1[E(t_1)-E(1)] + \dots Y_N[E(t_N)-E(1)] \bigg] 
+\end{aligned}
+$$  
+
+
+And because we assume independence and identical distribution of $T_t$, knowing that the 
+$E(T_t) = 1/p$ because $T_N\sim \text{Geometric}(p)$,  
+$$
+\begin{aligned}
+ &= \frac{\sum_{t=1}^NY_t}{p^2} + \frac{NY_{N+1}}{(1-p)^2} + 
+ \frac{1}{(1-p)^2} \bigg[ Y_1[\frac{1}{p}-1] + \dots Y_N[\frac{1}{p}-1]\bigg] \\
+ &= \frac{\sum_{t=1}^NY_t}{p^2} + \frac{NY_{N+1}}{(1-p)^2} + \frac{1-p}{p(1-p)^2}\sum_{t=1}^NY_t \\
+ &= \frac{1}{p^2}\sum_{t=1}^NY_t + \frac{1}{(1-p)^2}NY_{N+1} + \frac{1}{p(1-p)}\sum_{t=1}^NY_t
+\end{aligned}
+$$  
+Thus the observed Information for these data is `r round(I,1)`.  
+The asymptotic variance is the inverse of the information. In this case `r formatC(var, format="f", digits=6)`.  
+
+## (d)  
+For the data in Table 1, calculate the MLEs $\hat{p}_1$ (smokers) and $\hat{p}_2$ (non-
+smokers), the variance of $\hat{p}_j$, and asymptotic 95% confidence intervals for $\hat{p}$,
+$j = 1,2$.  
+
+The form of the 1-$\alpha$% confidence interval is  
+$$
+\begin{aligned}
+\bigg[ \hat{p} \pm \Phi(1-\alpha/2)\times\sqrt{\mathcal{I}^{-1}/n}\bigg] \\
+\end{aligned}
+$$  
+Hence, for smokers it is `r formatC(ci_smokers,format="f", digits=3)`, and for non-smokers 
+it is `r formatC(ci_nonsmokers, format="f", digits=3)`.  
+This suggests that the probability of conceiving on a given time-period is smaller for 
+smokers than for non-smokers. 
+
+## (e)  
+We now consider a Bayesian analysis for a single group. The conjugate prior for $p$ is a 
+beta distribution, $Be(a,b)$. State the form of the posterior with this choice. 
+Give the form of the posterior mean and write as a weighted combination of the MLE and the prior mean.  
+
+By Bayes Rule, the posterior distribution is  
+$$
+\begin{aligned}
+P(p|\text{data}) &= \frac{P(\text{data}|p) \times P(p)}{P(\text{data})} \\
+&\propto P(\text{data}|p) \times P(p) \\
+&\propto L(p)\times P(p) \\
+&\propto \bigg (\prod_{T=1}^N [p(1-p)^{t-1}]^{Y_t}\bigg) \times [(1-p)^N]^{Y_{N+1}} \times 
+         p^{\alpha-1}(1-p)^{\beta -1} \\
+&\propto \bigg[ p^{\sum_{t=1}^N Y_t} (1-p)^{NY_{N+1} + \sum_{t=1}^NY_t(t-1)} \bigg] \times 
+         p^{\alpha-1}(1-p)^{\beta -1} \\
+&\propto p^{\sum_{t=1}^N Y_t+\alpha - 1} \times (1-p)^{NY_{N+1} + \sum_{t=1}^NY_t(t-1) + \beta -1}
+\end{aligned}
+$$  
+ignoring the Beta constant since we're stating proportionality.  
+
+Notice the likelihood-prior product is Beta-looking with $\alpha^*=\sum_{t=1}^N Y_t+\alpha$ and 
+$\beta^*=NY_{N+1} + \sum_{t=1}^NY_t(t-1) + \beta$. Hence we can normalize this by multiplying 
+by the following Beta normalizing function:  
+
+$$
+\frac{\Gamma[\sum_{t=1}^N \{Y_t\}+\alpha + NY_{N+1} + \sum_{t=1}^N\{Y_t(t-1)\} + \beta]}
+     {\Gamma[\sum_{t=1}^N \{Y_t\}+\alpha]\Gamma[NY_{N+1} + \sum_{t=1}^N\{Y_t(t-1)\} + \beta]}
+$$  
+
+thus yielding the posterior distribution:   
+$$
+\frac{\Gamma[\sum_{t=1}^N \{Y_t\}+\alpha + NY_{N+1} + \sum_{t=1}^N\{Y_t(t-1)\} + \beta]}
+     {\Gamma[\sum_{t=1}^N \{Y_t\}+\alpha]\Gamma[NY_{N+1} + \sum_{t=1}^N\{Y_t(t-1)\} + \beta]}
+     p^{\sum_{t=1}^N \{Y_t\}+\alpha - 1} \times (1-p)^{NY_{N+1} + \sum_{t=1}^N\{Y_t(t-1)\} + \beta -1}
+$$  
+
+The posterior mean is then  
+$$
+\frac{\alpha^*}{\alpha^* + \beta^*} = 
+\frac{\sum_{t=1}^N \{Y_t\}+\alpha}{\sum_{t=1}^N \{Y_t\}+\alpha + NY_{N+1} + \sum_{t=1}^N\{Y_t(t-1)\} + \beta}
+$$  
+
+Recall $\hat{p} = \frac{\sum_{t=1}^NY_t(t-1)}{2\sum_{t=1}^NY_t(t-1) + NY_{N+1}}$, thus 
+we can write the posterior mean as a weighted combination of $\hat{p}$ and the prior mean.  
+We have the following quantities  
+$$
+\begin{aligned}
+\hat{p}_{mle} &= \frac{\sum_{t=1}^NY_t}{NY_{N+1} + \sum_{t=1}^N Y_t(t-1) + \sum_{t=1}^NY_t} \\
+\bar{p}_{prior} &= \frac{\alpha}{\alpha + \beta} \\
+\bar{p}_{posterior} &= \frac{\sum_{t=1}^N \{Y_t\}+\alpha}{\sum_{t=1}^N \{Y_t\}+\alpha + NY_{N+1} + \sum_{t=1}^N\{Y_t(t-1)\} + \beta}
+\end{aligned}
+$$  
+
+For simplicity define $A=\sum_{t=1}^NY_t$, $B=\sum_{t=1}^N Y_t(t-1)$, and $N=NY_{N+1}$. 
+Then, the inverse of MLE estimate, mean prior, and mean posterior are:  
+
+$$
+\begin{aligned}
+\hat{p}_{mle}^{-1} &= \frac{A+B+N}{A} \\
+\bar{p}_{prior}^{-1} &= \frac{\alpha + \beta}{\alpha} \\
+\bar{p}_{posterior}^{-1} &= \frac{A + \alpha + B + \beta + N}{A+\alpha}
+\end{aligned}
+$$  
+The inverse of the posterior mean can be written as,  
+$$
+\begin{aligned}
+\bar{p}_{posterior}^{-1} &=
+\frac{\alpha+\beta}{\alpha} \times \frac{\alpha}{A+\alpha} + \frac{A+B+N}{A} \times \frac{A}{A+\alpha} \\
+&= \bar{p}_{prior}^{-1} \times \frac{\alpha}{A+\alpha} + \hat{p}_{mle}^{-1} \times \frac{A}{A+\alpha}
+\end{aligned}
+$$  
+Define $w^{-1}=\frac{A}{A+\alpha}$, and $(1-w)^{-1} = \frac{\alpha}{A+\alpha}$, then  
+$$
+\bar{p}_{prior}^{-1} \times (1-w)^{-1} + \hat{p}_{mle}^{-1} \times w^{-1} 
+$$  
+and the posterior mean can then be written as weighted combination of the MLE and the prior mean as:  
+$$
+w\cdot\hat{p}_{mle} + (1-w)\bar{p}_{prior}
+$$
+
+## (f)  
+Suppose we wish to fix the parameters of the prior, $a$ and $b$, so that the mean is $\mu$ 
+and the prior standard deviation is $\sigma$. Obtain expressions for $a$ and $b$ in terms 
+of $\mu$ and $\sigma^2$.  
+
+We know the mean and variance of a Be(a,b) are $\alpha/(\alpha+\beta)$ and 
+$\frac{\alpha \beta}{(\alpha + \beta)^2(\alpha+\beta+1)}$ respectively. Using these 
+expressions as a system of equations, we can solve for both $\alpha$ and $\beta$:  
+
+$$
+\begin{aligned}
+\mu &= \alpha/(\alpha+\beta) \\
+\alpha + \beta &= \alpha/\mu \\
+\beta &= \alpha/\mu -1 \\
+&= \alpha(1/\mu-1)
+\end{aligned}
+$$  
+$$
+\begin{aligned}
+\sigma^2 &= \frac{\alpha \beta}{(\alpha + \beta)^2(\alpha+\beta+1)} \\
+         &= \frac{\alpha(\alpha [1/\mu -1])}{(\alpha+\alpha [1/\mu -1])^2(\alpha + \alpha [1/\mu -1] +1)} \\
+        \alpha^2 [1/\mu -1] &= (\alpha+\alpha [1/\mu -1])^2(\alpha + \alpha [1/\mu -1] +1)\sigma^2 \\
+         &= [\alpha(1+[1/\mu -1])]^2[\alpha(1+[1/\mu -1]) +1]\sigma^2 \\
+         &= \alpha^2(1+[1/\mu -1])^2[\alpha(1+[1/\mu -1]) +1]\sigma^2 \\
+         [1/\mu -1] &= (1+[1/\mu -1])^2[\alpha(1+[1/\mu -1]) +1]\sigma^2 \\
+         &= \alpha\sigma^2(1+[1/\mu -1])^3 + \sigma^2(1+[1/\mu -1])^2 \\
+         \alpha &=\frac{[1/\mu -1]-\sigma^2(1+[1/\mu -1])^2}{\sigma^2(1+[1/\mu -1])^3} \\
+         &=\mu\bigg[\frac{\mu(1-\mu)}{\sigma^2} -1 \bigg]
+\end{aligned}
+$$
+
+## (g)  
+For the data in Table 1, assume we wish to have a beta prior with $\mu = 0.2$ and 
+$\sigma = 0.08$ for each of the two groups of women. State the posterior for the prior 
+corresponding to this choice and give the posterior means and 95% credible intervals for 
+each group. Provide representations of the posterior distributions.  
+
+Notice that  
+$$
+\text{Be}(\mu = 0.20, \sigma = \sqrt{0.08}) \implies \text{Be}(\alpha = 4.8, \beta = 19.2)
+$$  
+per the above equations for $\alpha$ and $\beta$.  
+
+Assuming a prior with Beta($\mu = 0.20$, $\sigma = \sqrt{0.08}$) for each group, the 
+Bayesian model for group $j \in \{1,2\}$ then:  
+
+$$
+\begin{aligned}
+P(p|\text{data}_j) &\propto P(\text{data}_j|p) \times P(p) \\
+&\propto L(p)\times \pi(p) \\
+&\propto \bigg (\prod_{T=1}^N [p(1-p)^{t-1}]^{Y_t}\bigg) \times [(1-p)^N]^{Y_{N+1}} \times 
+         p^{4.8-1}(1-p)^{19.2 -1} \\
+&\propto \bigg[ p^{\sum_{t=1}^N Y_t} (1-p)^{NY_{N+1} + \sum_{t=1}^NY_t(t-1)} \bigg] \times 
+         p^{4.8-1}(1-p)^{19.2 -1} \\
+&\propto p^{\sum_{t=1}^N Y_t+4.8 - 1} \times (1-p)^{NY_{N+1} + \sum_{t=1}^NY_t(t-1) + 19.2 -1}
+\end{aligned}
+$$  
+Thus we see the this expression can be normalized with the Beta constant  
+$$
+\frac{\Gamma[\sum_{t=1}^N \{Y_t\}+4.8 + NY_{N+1} + \sum_{t=1}^N\{Y_t(t-1)\} + 19.2]}
+     {\Gamma[\sum_{t=1}^N \{Y_t\}+4.8]\Gamma[NY_{N+1} + \sum_{t=1}^N\{Y_t(t-1)\} + 19.2]}
+$$  
+
+thus yielding the posterior Beta distribution:   
+$$
+\frac{\Gamma[\sum_{t=1}^{12} \{Y_t\}+4.8 + NY_{13} + \sum_{t=1}^{12}\{Y_t(t-1)\} + 19.2]}
+     {\Gamma[\sum_{t=1}^{12} \{Y_t\}+4.8]\Gamma[NY_{13} + \sum_{t=1}^{12}\{Y_t(t-1)\} + 19.2]}
+     p^{\sum_{t=1}^{12} \{Y_t\}+4.8 - 1} \times (1-p)^{NY_{13} + \sum_{t=1}^{12}\{Y_t(t-1)\} + 19.2 -1}
+$$  
+
+for a given group $j$.  
+
+Because the posterior is a Beta distribution, its mean is $\alpha^*/(\alpha^* + \beta^*)$, so 
+for smokers $\alpha^*_{smokers}$ = `sum(row1 from t=1 to t=12) + 4.8 - 1 = 87.2` and 
+$\beta^*_{smokers}$ = `sum(row1 from t=1 to t=12)*time_period[1 to 12] + 19.2 - 1 = 310.8`. 
+For nonsmokers it's the same except that we use row2 in table 1.  
+
+To derive the credible intervals, I got 10,000 draws from 
+$\text{Be}(\alpha_{smokers}^*, \beta_{smokers}^*)$ and got the bottom 2.5$ and upper 97.5% 
+quantiles using `quantile(probs=(0.025,0.975))` and feeding it the 10,000 draws from the
+posterior. I did the same for nonsmokers using $\alpha_{nonsmokers}^*$ and 
+$\beta_{nonsmokers}^*$ for the nonsmokers posterior.  
+
+The results are in the following table:  
+
+```{r, echo=FALSE}
+knitr::kable(q1g, digits = c(3,2,3), 
+             caption = "Posterior mean probability of \n conceiving at a given time period per group\nwith Beta(a=4.8,b=19.2) prior")
+```  
+
+## Problem 2  
+
+Again for a generic group, a more complex likelihood for these data would assume that the 
+probability p for each woman arises from a distribution $\pi(p)$. 
+
+## (a)  
+
+Show that  
+
+$$
+Pr(T=t) = E[(1-p)^{t-1}]-E[(1-p)^t]  
+$$
+
+We proceed by induction.  
+For the anchor step, consider t=1:  
+
+$$
+P(T=1) = p(1-p)^{1-1} = p(1-p)^0 = p  
+$$  
+$$
+\begin{aligned}
+p &= E[(1-p)^{1-1}] - E[(1-p)^1]  \\
+&= E[(1-p)^0] - E[(1-p)] \\
+&= E(1) - E(1) +E(p) \\
+&= p
+\end{aligned}
+$$  
+And for the hypothesis step, we assume $P(T=t) = E[(1-p)^{t-1}] - E[(1-p)^t]$ and directly 
+prove  
+$P(T=t+1) = E[(1-p)^{t+1-1}] - E[(1-p)^{t+1}]$.  
+
+$$
+\begin{aligned}
+P(1-p)^{t+1-1} &= p(1-p)^{t-1}(1-p) \\
+&= \bigg[E[(1-p)^{t-1}] - E[(1-p)^t]\bigg](1-p) \\
+&= E[(1-p)^{t-1}](1-p) - E[(1-p)^t](1-p) \\
+&= E[(1-p)^{t-1}(1-p)] - E[(1-p)^t(1-p)] \\
+&= E[(1-p)^{t}] -  E[(1-p)^{t+1}] 
+\end{aligned}
+$$  
+
+
+and show that  
+
+$$
+Pr(T>t) = E[(1-p)^t]
+$$  
+
+
+Recall the CDF of a geometrically distributed random variable T is $P(T\leq t) = 1-(1-p)^t$ 
+for $t>=1$. Hence, $P(T>t) = 1-P(T\leq t) = (1-p)^t$.  
+
+For induction's anchor step, consider t=1. Then  
+$$
+P(T>1) = (1-p)^1 = 1-p
+$$  
+$$
+E[(1-p)^1] = E[(1-p)] = E(1) - E(p) = 1-p
+$$  
+For hypothesis step, assume $P(T>t) = E[(1-p)^t]$ and prove $P(T>t+1) = E[(1-p)^{t+1}]$.  
+$$
+\begin{aligned}
+P(T>t+1) &= (1-p)^{t+1} \\
+ &= (1-p)^t(1-p) \\
+ &= E[(1-p)^t](1-p) \\
+ &= E[(1-p)^{t+1}]
+\end{aligned}
+$$  
+
+## (b)  
+Obtain expressions for $P(T=t|\alpha,\beta)$ and $P(T>t|\alpha,\beta)$ with $\pi(\cdot)$ 
+taken as the beta distribution, $\text{Be}(\alpha, \beta)$.  
+
+Assuming the probability is $\text{Be}(\alpha, \beta)$, then the probability of conception 
+for a given group $j \in \{1,2\}$ is  
+
+$$
+P(T=t) = \frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha+\beta)}p^{\alpha-1}(1-p)^{\beta-1}
+         \bigg(1-\frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha+\beta)}p^{\alpha-1}(1-p)^{\beta-1}\bigg)^{t-1}
+$$  
+and  
+$$
+P(T>t) = \bigg(1-\frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha+\beta)}p^{\alpha-1}(1-p)^{\beta-1}\bigg)^{t}
+$$  
+
+## (c)  
+Using the previous part, write down the likelihood function $L(\alpha, \beta)$ based on data
+${Yt,t=1, \dots , N+1}$.  
+
+$$
+\begin{aligned}
+L(\alpha, \beta) \\
+&= \prod_{T=1}^N 
+\bigg\{ 
+\frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha+\beta)}p^{\alpha-1}(1-p)^{\beta-1}
+         \bigg(1-\frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha+\beta)}p^{\alpha-1}(1-p)^{\beta-1}\bigg)^{t-1}
+\bigg\}^{Y_t} \times \bigg(1- \frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha+\beta)}p^{\alpha-1}(1-p)^{\beta-1} \bigg)^{NY_{N+1}} \\
+&= \bigg\{ 
+\frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha+\beta)}p^{\alpha-1}(1-p)^{\beta-1}
+\bigg(1-\frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha+\beta)}p^{\alpha-1}(1-p)^{\beta-1}\bigg)^{t-1}\bigg\}^{\sum_{T=1}^NY_t} \times 
+\bigg(1- \frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha+\beta)}p^{\alpha-1}(1-p)^{\beta-1} \bigg)^{NY_{N+1}} \\
+&= \bigg(\frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha+\beta)}\bigg)^{\sum_{T=1}^NY_t}
+p^{\sum_{T=1}^NY_t(\alpha-1)}(1-p)^{\sum_{T=1}^NY_t(\beta-1)}
+\bigg(1-\frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha+\beta)}p^{\alpha-1}(1-p)^{\beta-1}\bigg)^{\sum_{T=1}^NY_t(t-1)} \\ &\times 
+\bigg(1- \frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha+\beta)}p^{\alpha-1}(1-p)^{\beta-1} \bigg)^{NY_{N+1}} \\
+&= \bigg(\frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha+\beta)}\bigg)^{\sum_{T=1}^NY_t}
+p^{\sum_{T=1}^NY_t(\alpha-1)}(1-p)^{\sum_{T=1}^NY_t(\beta-1)}
+\bigg(1-\frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha+\beta)}p^{\alpha-1}(1-p)^{\beta-1}\bigg)^{\sum_{T=1}^NY_t(t-1)+{NY_{N+1}}}
+\end{aligned}
+$$  
+
+## (d)  
+Find the $\hat{\alpha}_{mle}, \hat{\beta}_{mle}$ for the data of Table 1 for $j=1$ 
+(smokers) and $j=2$ (non-smokers).  
+
+To maximize $L(\alpha, \beta)$ we use R's function `optim` as follows:  
+```
+mylikelihood <- function(theta, x) {
+  alpha <- theta[1]; beta <- theta[2]; p<-theta[3]
+  t <- 1:13
+  sum(x[1:12])*lbeta(alpha, beta) + 
+    sum(x[1:12]*(alpha-1))*log(p) +
+    sum(x[1:12]*(beta -1))*log(1-p) + 
+    sum(x[1:12]*(t[1:12]-1)*13*x[13]) * log(1-base::beta(alpha,beta)*(p)^(alpha-1)*(1-p)^(beta-1))
+}
+
+beta_params_smokers <- optim(par = c(2,5,0.5),
+                             fn = mylikelihood, 
+                             control = list(fnscale = -1),
+                             x=smokers)$par
+
+beta_params_nonsmokers <- optim(par = c(2,5,0.5),
+                                fn = mylikelihood, 
+                                control = list(fnscale = -1),
+                                x=nonsmokers)$par
+                            
+```
+We find that for smokers 
+$\hat{\alpha}_{smokers}$ = `r round(beta_params_smokers[1],1)`. 
+$\hat{\beta}_{smokers}$ = `r round(beta_params_smokers[2],1)`, 
+which yields $p\approx$ `r round(p_smokers_2d,2)`   
+
+And for non smokers 
+$\hat{\alpha}_{nonsmokers}$ = `r round(beta_params_nonsmokers[1],1)`, 
+$\hat{\beta}_{nonsmokers}$ = `r round(beta_params_nonsmokers[2],1)`, 
+which yields $p\approx$ `r round(p_nonsmokers_2d,2)`  
+So either my likelihood is wrong, or this model suggests nonsmokers have a lower probability 
+of conceiving on a given time period t.  
+
+
+## Problem 3  
+
+## (a)  
+Show that the likelihood (1) can be written as a product of binomial distributions, the 
+form of which you should precisely give.  
+
+Recall that the binomial distribution describes the stochastic process of getting k successes 
+in n trials. If we think of each each woman that was able to conceive as a success and the 
+number of women that attempted it as (successful or not) trial, then we have for time 
+period 1:  
+
+$$
+{\sum_{T=1}^{N+1}Y_T \choose Y_1} p^{Y_1}(1-p)^{\sum_{T=1}^{N+1}Y_T - Y_1}
+$$  
+We do the same for subsequent periods,    
+
+$$
+{\sum_{T=1}^{N+1}Y_T       \choose Y_1}              p^{Y_1}(1-p)^{\sum_{T=1}^{N+1}Y_T -Y_1} \times 
+{\sum_{T=1}^{N+1}Y_T -Y_1  \choose Y_2}              p^{Y_2}(1-p)^{\sum_{T=1}^{N+1}Y_T -Y_1-Y_2} \times \dots 
+{\sum_{T=1}^{N+1}Y_T -\sum_{t=1}^{N}Y_t \choose Y_N} p^{Y_N}(1-p)^{(\sum_{T=1}^{N+1}Y_T -\sum_{T=1}^{N}Y_T)-Y_N} 
+$$
+
+Treating the product of binomial coefficients as a constant $C_1$, this yields the following 
+likelihood:  
+
+$$
+L(p) = C_1 p^{\sum_{T=1}^N}(1-p)^{K_2}
+$$  
+where $K_2$ is obtain as follows:  
+
+$$
+\begin{aligned}
+K_2  
+&= \sum_{T=1}^{N+1}Y_T-Y_1 + \sum_{T=1}^{N+1}Y_T-Y_1 - Y2 + \dots \sum_{T=1}^{N+1}Y_T-\sum_{T=1}^{N} \\
+&= Y_1 + \dots Y_{N+1} - Y_1 + Y_1+\dots + Y_{N+1} -Y_1-Y_2 + \dots Y_1 + \dots Y_{N+1}-Y_1-\dots Y_{N} \\
+&= Y_2 + 2(Y_3) + 3(Y_4) + \dots N(Y_{N+1}) \\
+&= \sum_{T=2}^{N+1}Y_T(T-1)
+\end{aligned}
+$$  
+
+Taking the log of the likelihood function, then taking the derivative with respect to p, 
+setting it equal to zero and solving for p, yields the MLE estimate for this likelihood 
+(which is a product of binomials, remember).  
+
+$$
+\begin{aligned}
+l(p) 
+&= log[L(p)] \\
+&= log(C_1) + \sum_{T=1}^NY_T log(p) + \sum_{T=2}^{N+1}Y_T(T-1) log(1-p)
+\end{aligned}
+$$
+
+## (b)  
+
+Fit the binomial model, and show that the estimates of the probabilities $p_j$ , $j=1,2$, 
+are identical to that under the previous MLE analysis. 
+Obtain 95% asymptotic confidence intervals for $p_1$ and $p_2$.  
+
+The MLE estimate for p is, as usual, obtained by setting $\frac{\partial l(p)}{\partial p}$ 
+to zero and solving for $p$, which results in  
+
+$$
+\begin{aligned}
+\frac{\partial l(p)}{\partial p} 
+&= \frac{1}{p}\sum_{T=1}^NY_T  - \frac{1}{1-p}\sum_{T=2}^{N+1}Y_T(T-1)
+\end{aligned}
+$$  
+After solving for $p$, we get  
+$$
+\hat{p}_{mle_{bin}} = \frac{\sum_{T=1}^NY_T}{\sum_{T=1}^NY_T+\sum_{T=2}^{N+1}Y_T(T-1) + Y_1}
+$$  
+
+Notice that we can rearrange the terms in the denominator to get:  
+
+$$
+\hat{p}_{mle_{bin}} = \frac{\sum_{T=1}^NY_T}{\sum_{T=1}^NY_T+\sum_{T=1}^{N}Y_T(T-1) + NY_{N+1}}
+$$  
+which is the same MLE estimate for $p$ under the geometric likelihood in problem 1. 
+
+Variance is obtained by taking the inverse of the information (i.e. 
+$-E[\frac{\partial^2 l(p)}{\partial p^2}]$. With the variance, I construct asymptotic 95% 
+confidence intervals.  
+
+$$
+\begin{aligned}
+\mathcal{I}_p &= -E[\frac{\partial^2 l(p)}{\partial p^2}] \\
+&= \frac{1}{p^2}E[\sum_{T=1}^N Y_T] + \frac{1}{(1-p)^2}E[\sum_{T=2}^{N+1}Y_T(T-1)] \\
+&= \frac{1}{p^2}\sum_{T=1}^NY_T + \frac{1}{(1-p)^2}\sum_{T=2}^NY_Tp \\
+&= \frac{1}{p(1-p)}\sum_{T=1}^NY_T
+\end{aligned}
+$$  
+(Recall that $E(X) = np$ when $X\sim Binomial(p)$, and "n" is the sample size at each t)  
+
+The following table compares $p_1$ and $p_2$ obtained from the likelihood in problem 1, and 
+from this "product of binomials" likelihood we just derived.  
+
+```{r, echo = FALSE}
+knitr::kable(tab3b, digits = c(2,2,3,3,3,3,3),
+             caption = "MLE estimates and 95% asymptotic confidence intervals\nby likelihood function")
+```
+
+
+Although the estimates are identical, the geometric variance yields narrower (better) 
+confidence intervals.  
+
+## (c)  
+
+Carry out a Bayesian analysis with independent $Beta(1,1)$ priors on $p_1$ and $p_2$ 
+and produce a histogram representation of the posterior distribution of $p_1-p_2$.  
+
+Observe that this poor choice if prior leads to the Haldame prior causing us to recover 
+the likelihood as posterior. In order obtain estimates of the probability of p given the 
+data, we have to draw observations from a posterior we can't tracked analytically. (If the 
+choice of $\alpha$ and $\beta$ parameters for the prior led to a non-constant prior, we could 
+take advantage of conjugacy.) 
+
+
+$$
+\begin{aligned}
+P(p|data) &\propto P(data|p) \times P(p) \\
+&\propto L(p) \times Be(1,1) \\
+&\propto C_1 p^{\sum_{T=1}^N}(1-p)^{K_2} \times \frac{1}{Be(1,1)}p^{1-1}(1-p)^{1-1} \\ 
+&\propto C_1 p^{\sum_{T=1}^N}(1-p)^{K_2} \times 1
+\end{aligned}
+$$  
+
+Hence we rely on numerical methods to obtain draws from the posterior.  
+
+Given that this problem concerns a single parameter, the most straight forward method to 
+code given the time constrained is the grid method. I created a thousand values for $p$. 
+For each value p value, I computed the likelihood and simulated a prior. A note on the 
+likelihood: the likelihood is the product of 13 binomials, each with a single $p$ parameter. 
+Hence, each likelihood is a scalar, but it is the product of 13 binomial likelihoods, so to
+speak.  
+After doing that for each $p$ value, I took the product of the likelihood and the prior 
+which was 1 because $Be(1,1)$. Then I "created" the posterior using the sum of the 
+likelihood values for each $p$. (See code under "3.c".)  
+The following are plots of the posterior for each group, as well as for the difference 
+between the two.  
+
+```{r, echo=FALSE}
+ggarrange(plot_p1, plot_p2, 
+          #labels = c("smokers", "non-smokers"),
+          ncol = 1, nrow = 2)
+
+```
+
+```{r, echo=FALSE}
+hist(posterior_diff, 
+     main="difference in probability between\n nonsmokers smokers",
+     xlab = "posterior difference",
+     ylab = "")
+```
+
+As can be seen, the posterior probability of p being higher for nonsmokers is higher than 
+for smokers. In other words, according to this Bayesian analysis, non smokers have a higher 
+probability of conception on any given time period than women who smoke.  
+Baes on this model, the probability of conception for each group is presented in the 
+following table, and compared to the previous Bayesian model in problem 2.  
+
+```{r, echo = FALSE}
+knitr::kable(p3ctab, digits=2, caption = "Bayesian model estimates of p")
+```
+
+
+## (d)  
+What is the probability that $p_2>p_1$?  
+Based on this analysis, and taking the mean of the times the posterior draws for 
+non-smokers was greater than  for smokers, we get: `r prob_p2gtp1`, so 16% probability.    
+
+## (e)  
+Obtain predictive distributions of the cycle until conception for women who smoke and for 
+women who do not smoke. Give your results in the form of a table, with one row for 
+smokers and one for non-smokers.  
+
+In 3(c) we carried out a Bayesian analysis and got an estimate for $p_1$ and $p_2$ for an 
+observed sample. We can now go backwards, that is, with the estimates for $p_1$ and $p_2$ 
+in hand, we can now simulate samples from the likelihood. We can then use those simulated samples and combined them with the measure of uncertainty that the posterior gives us to construct a predictive distribution for unseen samples.  
+
+First, we create a function to simulate samples using the binomial likelihood. In other words,
+we simulate the number of successes in 100 trials given a set of probabilities (so we 
+create a vector). This is t=1. Then I simulate the number of successes in 100-successes in 
+t=1. This is t=2. We do that for 13 periods. The result is a vector of 13 values for each 
+probability $p$. Each vector is a sample.  
+
+We then simulate 100 samples per $p$ where $p \in (0,1)$ in 200 $p$'s.  
+Then, we create *weighted* histograms of each period $t$. The weight is the 
+posterior probability assigned to a given $p$.  
+
+We do that for $p_1$ and $p_2$, where the weights are drawn from the posteriors we derived 
+in 3(c).  
+
+We these simulated observations we then compute a weighted average of the probability of 
+success (conception) on a given time period by smoking group. Again, the weights are the 
+posterior probabilities on a given $p$.  
+
+```{r, echo=FALSE}
+knitr::kable(tab3e, digits=3, 
+             caption="probability of conceiving by period t and smoking group")
+```  
+
+We also present weighted histograms of simulated time periods 1 thru 5, 10, 13 by group.
+
+For smokers  
+
+```{r, echo=FALSE}
+par(mfrow = c(2,2))
+plotrix::weighted.hist(pred_dist_smokers_df$t1,pred_dist_smokers_df$pred_wt, main="t1")
+plotrix::weighted.hist(pred_dist_smokers_df$t2,pred_dist_smokers_df$pred_wt, main="t2")
+plotrix::weighted.hist(pred_dist_smokers_df$t3,pred_dist_smokers_df$pred_wt, main="t3")
+plotrix::weighted.hist(pred_dist_smokers_df$t4,pred_dist_smokers_df$pred_wt, main="t4")
+```  
+
+```{r, echo=FALSE}
+par(mfrow = c(2,2))
+plotrix::weighted.hist(pred_dist_smokers_df$t5,pred_dist_smokers_df$pred_wt, main="t5")
+plotrix::weighted.hist(pred_dist_smokers_df$t8,pred_dist_smokers_df$pred_wt, main="t8")
+plotrix::weighted.hist(pred_dist_smokers_df$t10,pred_dist_smokers_df$pred_wt, main="t10")
+plotrix::weighted.hist(pred_dist_smokers_df$t13,pred_dist_smokers_df$pred_wt, main="t13")
+```  
+
+For non-smokers  
+
+```{r, echo=FALSE}
+par(mfrow = c(2,2))
+plotrix::weighted.hist(pred_dist_nonsmokers_df$t1,pred_dist_nonsmokers_df$pred_wt, main="t1")
+plotrix::weighted.hist(pred_dist_nonsmokers_df$t2,pred_dist_nonsmokers_df$pred_wt, main="t2")
+plotrix::weighted.hist(pred_dist_nonsmokers_df$t3,pred_dist_nonsmokers_df$pred_wt, main="t3")
+plotrix::weighted.hist(pred_dist_nonsmokers_df$t4,pred_dist_nonsmokers_df$pred_wt, main="t4")
+```
+```{r, echo=FALSE}
+par(mfrow = c(2,2))
+plotrix::weighted.hist(pred_dist_nonsmokers_df$t5,pred_dist_nonsmokers_df$pred_wt, main="t5")
+plotrix::weighted.hist(pred_dist_nonsmokers_df$t8,pred_dist_nonsmokers_df$pred_wt, main="t8")
+plotrix::weighted.hist(pred_dist_nonsmokers_df$t10,pred_dist_nonsmokers_df$pred_wt, main="t10")
+plotrix::weighted.hist(pred_dist_nonsmokers_df$t13,pred_dist_nonsmokers_df$pred_wt, main="t13")
+```
+
+
+## Appendix  
+```{}
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# student: Raul
+# course: STAT 570
+# assignment: final
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+library(tidyverse)
+library(dplyr)
+rm(list=ls())
+
+#~~~~~~~~~~~#
+# Problem 1 #
+#~~~~~~~~~~~#
+
+smokers    <- c(29,16,17,4,3,9,4,5,1,1,1,3,7)
+nonsmokers <- c(198,107,55,38,18,22,7,9,5,3,6,6,12)
+stopifnot(length(smokers) == length(nonsmokers))
+
+#~~~~~#
+# 1.c #
+#~~~~~#
+get_phat <- function(cnts, t) {
+  l <- length(cnts)
+  stopifnot(l == length(t))
+  num <- sum(cnts[1:l-1])
+  denom <- cnts[l]*t[l] + sum(cnts[1:l-1]*(t[1:l-1]-1)) + num
+  #num <- sum(cnts[l-1]*(t[l-1] - 1))
+  #denom <- (2*num + cnts[l]*t[l])
+  return(num/denom)
+}
+
+get_I <- function(cnts, phat) {
+  #(1/phat^3 + 1/(phat*(1-phat)^2))*sum(cnts)
+  #(1/(phat*(1-phat)^2))*sum(cnts[1:length(cnts)])
+  sum(cnts[1:length(cnts)-1])/phat^2 + 
+    length(cnts)*(cnts[length(cnts)])/(1-phat)^2 + 
+      sum(cnts[1:length(cnts)-1])/(phat*(1-phat))
+}
+
+phat <- get_phat(cnts = smokers + nonsmokers, t = 1:13)
+I <- get_I(smokers + nonsmokers, phat = phat)
+var <- 1/I
+
+#~~~~~#
+# 1.d #
+#~~~~~#
+phat_smokers <- get_phat(cnts = smokers, t = 1:13)
+var_smokers <- 1/get_I(smokers, phat_smokers)
+phat_nonsmokers <- get_phat(cnts = nonsmokers, t = 1:13)
+var_nonsmokers <- 1/get_I(nonsmokers, phat_nonsmokers)
+
+get_ci <- function(theta, var, alpha, n) {
+  t <- qnorm(1-alpha/2)
+  return(c(theta - t*sqrt(var/n), theta + t*sqrt(var/n)))
+}
+
+ci_smokers    <- get_ci(phat_smokers,    var_smokers,    0.05, n=13)
+ci_nonsmokers <- get_ci(phat_nonsmokers, var_nonsmokers, 0.05, n=13)
+
+
+#~~~~~#
+# 1.g #
+#~~~~~#
+mu = 0.2
+sigma = 0.08
+a <- mu*(mu*(1-mu)/sigma^2 - 1)
+b <- a*(1/mu-1) 
+test <- rbeta(1e4, shape1=a, shape2=b)
+stopifnot(mean(test) - mu < 0.005)
+stopifnot(sd(test) - sigma < 0.002)
+rm(test)
+
+
+get_Yt         <- function(x)   sum(x[1:length(x)-1])
+get_Yt_tminus1 <- function(x,t) sum(x[1:length(x)-1]*t[1:length(t)-1])
+NY_Nplus1      <- function(x)   13*x[length(x)]
+get_post_mean <- function(a,b) a/(a+b)
+
+
+post_mean_smokers <- get_post_mean(a=get_Yt(smokers) -a -1,
+                                   b=get_Yt_tminus1(smokers, 1:13) -b -1)
+
+post_mean_nonsmokers <- get_post_mean(a=get_Yt(nonsmokers) -a -1,
+                                      b=get_Yt_tminus1(nonsmokers, 1:13) -b -1)
+
+get_cred_int <- function(a, b, ndraws, pc) {
+  post <- rbeta(ndraws, a, b)
+  cred_int <- quantile(post, probs = c((1-pc)/2, (1+pc)/2))
+  return(cred_int)
+}
+
+cred_int_smokers <- get_cred_int(a = get_Yt(smokers) -a -1,
+                                 b = get_Yt_tminus1(smokers, 1:13) -b -1,
+                                 ndraws = 1e4,
+                                 pc = 0.95)
+
+cred_int_nonsmokers <- get_cred_int(a = get_Yt(nonsmokers) -a -1,
+                                    b = get_Yt_tminus1(nonsmokers, 1:13) -b -1,
+                                    ndraws = 1e4,
+                                    pc = 0.95)
+
+
+
+q1g <- data.frame(cred_int_025 = c(cred_int_smokers[[1]], cred_int_nonsmokers[[1]]),
+                  post_mean    = c(post_mean_smokers, post_mean_nonsmokers),
+                  cred_int_975 = c(cred_int_smokers[[2]], cred_int_nonsmokers[[2]]))
+
+row.names(q1g) <- c("smokers", "non-smokers")
+colnames(q1g) <- c("2.5%","mean","97.5%")
+
+
+#~~~~~#
+# 2.d #
+#~~~~~#
+
+#mylikelihood <- function(theta, x=smokers) {
+#  alpha <- theta[1]
+#  beta <- theta[2]
+#  p <- rbeta(1, alpha, beta)
+#  (p*(1-p))^sum(x[1:12])*(1-p)^(13*x[13])
+#}
+
+mylikelihood <- function(theta, x) {
+  alpha <- theta[1]; beta <- theta[2]; p<-theta[3]
+  t <- 1:13
+  sum(x[1:12])*lbeta(alpha, beta) + 
+    sum(x[1:12]*(alpha-1))*log(p) +
+    sum(x[1:12]*(beta -1))*log(1-p) + 
+    sum(x[1:12]*(t[1:12]-1)*13*x[13]) * log(1-base::beta(alpha,beta)*(p)^(alpha-1)*(1-p)^(beta-1))
+}
+
+beta_params_smokers <- optim(par = c(2,5,0.5),
+                             fn = mylikelihood, 
+                             control = list(fnscale = -1),
+                             x=smokers)$par
+
+beta_params_nonsmokers <- optim(par = c(2,5,0.5),
+                                fn = mylikelihood, 
+                                control = list(fnscale = -1),
+                                x=nonsmokers)$par
+
+p_smokers_2d    <- mean(rbeta(1e5, beta_params_smokers[1]   , beta_params_smokers[2])) 
+p_nonsmokers_2d <- mean(rbeta(1e5, beta_params_nonsmokers[1], beta_params_nonsmokers[2]))  
+
+
+#~~~~~#
+# 3.b #
+#~~~~~#
+
+get_phat_binoms <- function(cnts, t) {
+  l <- length(cnts)
+  stopifnot(l == length(t))
+  num <- sum(cnts[1:l-1])
+  denom <- num + sum(cnts[2:l]*(t[2:l]-1)) + cnts[l]
+  return(num/denom)
+}
+
+phat_binoms_smokers <- get_phat_binoms(smokers, 1:13)
+phat_binoms_nonsmokers <- get_phat_binoms(nonsmokers, 1:13)
+
+get_I_binoms <- function(cnts,p) {
+    I <- 1/(p*(1-p)) * cnts
+    return(sum(I))
+}
+var_binoms_smokers    <- 1/get_I_binoms(smokers, phat_binoms_smokers)
+var_binoms_nonsmokers <- 1/get_I_binoms(nonsmokers, phat_binoms_nonsmokers)
+
+ci_binoms_smokers    <- get_ci(phat_binoms_smokers, var_binoms_smokers, 0.05, n=13)
+ci_binoms_nonsmokers <- get_ci(phat_binoms_nonsmokers, var_binoms_nonsmokers, 0.05, n=13)
+
+
+
+tab3b <- data.frame(geometric=c(phat_smokers, phat_nonsmokers),
+                    binomial=c(phat_binoms_smokers, phat_binoms_nonsmokers),
+                    geometric_c1 = c(ci_smokers[1], ci_nonsmokers[1]),
+                    geometric_c2 = c(ci_smokers[2], ci_nonsmokers[2]),
+                    binomial_c1 = c(ci_binoms_smokers[1], ci_binoms_nonsmokers[1]),
+                    binomial_c2 = c(ci_binoms_smokers[2], ci_binoms_nonsmokers[2])
+                    )
+colnames(tab3b) <- c("Geom","Binom", "Geom 2.5%", "Geom 97.5%", "Binom 2.5%", "Binom 97.5%")
+row.names(tab3b) <- c("smokers","non-smokers")
+
+
+#~~~~~#
+# 3.c #
+#~~~~~#
+
+# Grid method 
+pi_vals <- seq(from = 0, to = 1, length = 5e2)
+
+binom_likelihood <- function(x, pi_vals) {
+  l <- length(x)
+  N_sizes <- rep(0, l)
+  for(i in 1:l) {
+    N_sizes[i] <- sum(x[i:l])
+  }
+  like_val <- rep(0, length(pi_vals))
+  i=0
+  for(p in pi_vals){
+    i <- i+1
+    like_val[i] <- prod(dbinom(x, size=N_sizes, prob = p))
+  }
+  return(like_val)
+}
+
+get_posterior_df <- function(pi_vals, x) {
+  grid_data <- data.frame(pi_vals = pi_vals)
+  grid_data <- grid_data %>% 
+    mutate(prior = dbeta(pi_vals, 1, 1),
+           likelihood = binom_likelihood(x=x, pi_vals=pi_vals),
+           unnorm_post = likelihood * prior,
+           posterior = unnorm_post / sum(unnorm_post))
+}
+
+posterior_smokers <- get_posterior_df(pi_vals = pi_vals, x=smokers)
+
+plot_p1 <- ggplot(posterior_smokers, aes(x= pi_vals, y=posterior)) + 
+  geom_point() + 
+  xlab("suggested p") + ylab("posterior probability") + 
+  ggtitle("smokers") + 
+  geom_segment(aes(x = pi_vals, xend = pi_vals, y = 0, yend = posterior)) + 
+  theme(panel.grid=element_blank(),
+        panel.background = element_blank())
+
+posterior_nonsmokers <- get_posterior_df(pi_vals = pi_vals, x=nonsmokers)
+
+plot_p2 <- ggplot(posterior_nonsmokers, aes(x= pi_vals, y=posterior)) + 
+  geom_point() + 
+  xlab("suggested p") + ylab("posterior probability") + 
+  ggtitle("nonsmokers") + 
+  geom_segment(aes(x = pi_vals, xend = pi_vals, y = 0, yend = posterior)) + 
+  theme(panel.grid=element_blank(),
+        panel.background = element_blank())
+
+posterior_diff <- posterior_nonsmokers$pi_vals*(posterior_nonsmokers$posterior - 
+                                                posterior_smokers$posterior)
+hist(posterior_diff, 
+     main="difference in probability between\n nonsmokers smokers",
+     xlab = "posterior difference",
+     ylab = "",
+     freq=FALSE)
+
+post_mean_nonsmokers_p3 <- posterior_nonsmokers$pi_vals[posterior_nonsmokers$posterior==max(posterior_nonsmokers$posterior)]
+
+post_mean_smokers_p3 <- posterior_smokers$pi_vals[posterior_smokers$posterior==max(posterior_smokers$posterior)]
+
+p3ctab <- data.frame(bayesian1 = c(post_mean_smokers, post_mean_nonsmokers),
+                     bayesian2 = c(post_mean_smokers_p3, post_mean_nonsmokers_p3))
+
+colnames(p3ctab) <- c("mean from problem 2","mode from problem 3")
+row.names(p3ctab) <- c("smokers","non-smokers")
+
+
+#~~~~~#
+# 3.d #
+#~~~~~#
+prob_p2gtp1 <- mean(posterior_nonsmokers$pi_vals*posterior_nonsmokers$posterior > 
+                    posterior_smokers$pi_vals*posterior_smokers$posterior)
+
+
+#~~~~~#
+# 3.e #
+#~~~~~#
+
+# simulate 13 periods with successes with prob post
+get_sample <- function(N=100, t=1:13, post_p, probs=FALSE) {
+  Y_t <- rep(0,length(t))
+  Ns <- rep(0,length(t))
+  N <- N
+  for(i in t) {
+    Ns[i] <- N
+    Y_t[i] <- rbinom(1, size=N, prob=post_p)
+    N <- N - Y_t[i]
+  }
+  if(probs==FALSE){
+     return(Y_t)
+  }else{
+    Y_t_probs = Y_t/Ns
+    return(Y_t_probs)
+  }
+}
+
+#get_sample(N=100, post_p=post_mean_nonsmokers[1], probs=TRUE)
+
+# weight each sample by posterior weight of suggested p
+get_pred_dist <- function(Nsims=1, wts, pis) {
+  predictive_dist_df <- data.frame(matrix(ncol = 15, nrow = 0))
+  for(p in 1:length(pis)) {
+    for(j in 1:Nsims) {
+      row <- c(pis[p],
+               wts[p],
+               get_sample(N=100, t=1:13, pis[p])
+      )
+      predictive_dist_df <- rbind(predictive_dist_df, row)
+    }
+  }
+  colnames(predictive_dist_df) <- c("Ps","pred_wt",paste("t", 1:13,sep=""))
+  return(predictive_dist_df)
+}
+
+few <- seq(from=5, to=length(pi_vals), by=2)
+pi_weights_smokers <- posterior_smokers$posterior
+pi_weights_nonsmokers <- posterior_nonsmokers$posterior
+pred_dist_smokers_df <- get_pred_dist(pis=pi_vals, wts=pi_weights_smokers)
+pred_dist_nonsmokers_df <- get_pred_dist(pis=pi_vals, wts=pi_weights_nonsmokers)
+
+par(mfrow = c(1,2))
+plotrix::weighted.hist(pred_dist_smokers_df$t1,pred_dist_smokers_df$pred_wt, main="t1")
+plotrix::weighted.hist(pred_dist_smokers_df$t2,pred_dist_smokers_df$pred_wt, main="t2")
+plotrix::weighted.hist(pred_dist_smokers_df$t3,pred_dist_smokers_df$pred_wt, main="t3")
+plotrix::weighted.hist(pred_dist_smokers_df$t4,pred_dist_smokers_df$pred_wt, main="t4")
+par(mfrow = c(2,2))
+plotrix::weighted.hist(pred_dist_smokers_df$t5,pred_dist_smokers_df$pred_wt, main="t5")
+plotrix::weighted.hist(pred_dist_smokers_df$t8,pred_dist_smokers_df$pred_wt, main="t8")
+plotrix::weighted.hist(pred_dist_smokers_df$t10,pred_dist_smokers_df$pred_wt, main="t10")
+plotrix::weighted.hist(pred_dist_smokers_df$t13,pred_dist_smokers_df$pred_wt, main="t13")
+
+par(mfrow = c(2,2))
+plotrix::weighted.hist(pred_dist_nonsmokers_df$t1,pred_dist_nonsmokers_df$pred_wt, main="t1")
+plotrix::weighted.hist(pred_dist_nonsmokers_df$t2,pred_dist_nonsmokers_df$pred_wt, main="t2")
+plotrix::weighted.hist(pred_dist_nonsmokers_df$t3,pred_dist_nonsmokers_df$pred_wt, main="t3")
+plotrix::weighted.hist(pred_dist_nonsmokers_df$t4,pred_dist_nonsmokers_df$pred_wt, main="t4")
+par(mfrow = c(2,2))
+plotrix::weighted.hist(pred_dist_nonsmokers_df$t5,pred_dist_nonsmokers_df$pred_wt, main="t5")
+plotrix::weighted.hist(pred_dist_nonsmokers_df$t8,pred_dist_nonsmokers_df$pred_wt, main="t8")
+plotrix::weighted.hist(pred_dist_nonsmokers_df$t10,pred_dist_nonsmokers_df$pred_wt, main="t10")
+plotrix::weighted.hist(pred_dist_nonsmokers_df$t13,pred_dist_nonsmokers_df$pred_wt, main="t13")
+
+
+get_pred_dist_probs <- function(Nsims=1, wts, pis) {
+  predictive_dist_df <- data.frame(matrix(ncol = 15, nrow = 0))
+  for(p in 1:length(pis)) {
+    for(j in 1:Nsims) {
+      row <- c(pis[p],
+               wts[p],
+               get_sample(N=100, t=1:13, pis[p], probs = TRUE)
+      )
+      predictive_dist_df <- rbind(predictive_dist_df, row)
+    }
+  }
+  colnames(predictive_dist_df) <- c("Ps","pred_wt",paste("t", 1:13,sep=""))
+  return(predictive_dist_df)
+}
+
+pred_dist_probs_smokers_df <- get_pred_dist_probs(pis=pi_vals, wts=pi_weights_smokers)
+pred_dist_probs_nonsmokers_df <- get_pred_dist_probs(pis=pi_vals, wts=pi_weights_nonsmokers)
+
+tab3e <- 
+  purrr::map_dbl(pred_dist_probs_smokers_df, mean, na.rm=TRUE) %>% 
+  rbind(purrr::map_dbl(pred_dist_probs_nonsmokers_df, mean, na.rm=TRUE)) %>% 
+  as.data.frame()
+
+tab3e <- tab3e[,3:ncol(tab3e)]
+row.names(tab3e) <- c("smokers","non-smokers")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+

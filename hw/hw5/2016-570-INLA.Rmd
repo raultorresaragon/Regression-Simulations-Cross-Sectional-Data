@@ -1,0 +1,595 @@
+---
+title: "2016 570 Advanced Regression Methods for Independent Data \\\nR Notes: Bayesian
+  Modeling with INLA "
+author: |
+  | Jon Wakefield
+  | Departments of Statistics and Biostatistics, University of Washington
+date: '`r Sys.Date()`'
+output:
+  beamer_presentation:
+    highlight: tango
+    keep_tex: yes
+  slidy_presentation: default
+linkcolor: blue
+---
+
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+library(knitr)
+opts_chunk$set(collapse=TRUE, fig.align='center', tidy=TRUE, tidy.opts=list(blank=TRUE, width.cutoff=40), warning=FALSE,message=FALSE,cache=TRUE)
+```
+
+## Overview
+
+We first describe generalized linear mixed models (GLMMs) and INLA, leaning on Fong, Rue and Wakefield (2009).
+
+We then present some examples of GLMs and a simple random effects model.
+
+## Generalized Linear Mixed Models (GLMMs)
+
+GLMMs extend the generalized linear model, as proposed by Nelder and Wedderburn (1972) and comprehensively described in
+McCullagh and Nelder (1989), by adding normally distributed random
+effects on the linear predictor scale.  
+
+Suppose $Y_{ij}$ is of
+exponential family form: $Y_{ij}|\theta_{ij},\phi_1 \sim p(\cdot)$ where
+$p(\cdot)$ is a member of the exponential family, that is
+$$p(y_{ij}|\theta_{ij},\phi_1) = \exp\left[ \frac{y_{ij}\theta_{ij} - b(\theta_{ij})}{a(\phi_1)}+c(y_{ij},\phi_1) \right],
+$$
+for $i=1,\dots,m$ units (clusters), and $j=1,\dots,n_i$, measurements per unit, and where $\theta_{ij}$ is the (scalar) canonical parameter.
+
+## Generalized Linear Mixed Models (GLMMs)
+
+Let $\mu_{ij}=E[Y_{ij}|\beta,b_i,\phi_1]=b'(\theta_{ij})$ with $$g(\mu_{ij})= \eta_{ij} = x_{ij} \beta + z_{ij} b_i,$$
+where $g(\cdot)$ is a monotonic link function, $x_{ij}$ is $1
+\times p$ and $z_{ij}$ is $1 \times q$, with $\beta$ a $p \times 1$
+vector of fixed effects and $b_i$ a $q \times 1$ vector of random
+effects, hence $\theta_{ij}=\theta_{ij}(\beta,b_i)$. 
+
+Assume
+$b_i|Q \sim N(0,Q^{-1})$, where the precision matrix
+$Q=Q(\phi_2)$ depends on parameters $\phi_2$. 
+
+For some choices
+of model the matrix $Q$ is singular; examples include random walk
+models and intrinsic
+conditional autoregressive (ICAR) models, see Rue and Held (2005) for more details. 
+
+## Generalized Linear Mixed Models (GLMMs)
+
+We assume a Bayesian analysis and assume that $\beta$ is assigned a normal prior
+distribution. 
+
+Priors are also specified for $\phi_1$ and $\phi_2$.
+
+Let $\gamma = (\beta,b)$ denote the $G \times 1$
+vector of parameters assigned Gaussian priors.  
+
+We also require priors
+for $\phi_1$ (if not a constant) and for $\phi_2$.  
+
+Let
+$\phi=(\phi_1,\phi_2)$ be the variance components for which
+non-Gaussian priors are assigned, with $V=\mbox{dim}(\phi)$.
+
+For a GLM, we simply have $\gamma=\beta$, the regression parameters, and $\phi=\phi_1$ is the scale parameter (if present) in the likelihood.
+
+## INLA
+
+For the
+GLMM just described, the posterior is given by
+\begin{eqnarray*}
+\pi ( \gamma , \phi | y ) &\propto&  \pi ( \gamma |\phi ) \pi( \phi ) \prod_{i=1}^m p( y_i \mid \gamma, \phi )\\
+&\propto& \pi( \phi ) \pi(\beta) \mid Q (\phi_2)\mid^{1/2} \\
+&\times & \exp \left\{ -\frac{1}{2}
+b^{T} Q (\phi_2) b + \sum_{i=1}^m \log p (y_i \mid \gamma , \phi_1) \right\}
+\end{eqnarray*}
+where $y_i=(y_{i1},...,y_{in_i})$ is the vector of observations on unit/cluster $i$.
+
+## INLA
+
+INLA was first described in Rue et al. (2009), and has since been extended and applied in a very large number of situations, particularly for space-time modeling, for which a book has been written (Blangiardo and Camelett, 2015).
+
+We wish to obtain the posterior marginals $$\pi(\gamma_g \mid y),$$
+$g=1,\dots,G$, and $$\pi( \phi_v | y),$$ $v=1,\dots,V$.  
+
+The number of
+variance components, $V$, should not be too large for accurate
+inference, since these components are integrated out via Cartesian
+product numerical integration, which does not scale well with
+dimension.
+
+## INLA
+
+We write
+$$\pi ( \gamma_g| y ) = \int \pi ( \gamma_g | \phi, y) \times \pi( \phi| y ) ~d \phi$$
+which may be evaluated via the approximation
+\begin{eqnarray}
+\widetilde{\pi}( \gamma_g | y ) &=& \int \widetilde{\pi} ( \gamma_g | \phi,y) \times \widetilde{\pi}( \phi | y ) d \phi\nonumber \\
+ &\approx& \sum_{k=1}^K \widetilde{\pi} ( \gamma_g \mid \phi^k, y) \times \widetilde{\pi}( \phi^k \mid y ) \times w_k \label{eq:inla2}
+\end{eqnarray}
+where Laplace, or other related analytical approximations\footnote{The simplest
+version of the INLA algorithm first constructs a Gaussian
+approximation (alternatives includes simplified
+Laplace and Laplace approximations)}, are applied
+to carry out the integrations required for evaluation of
+$\widetilde{\pi} ( \gamma_g |\phi, y)$ and $\{\phi^k,w_k\}$ are the integration points and weights.
+
+## INLA
+
+To produce the grid of
+points $\{\phi^k,k=1,...,K\}$ over which numerical integration is
+performed, the mode of $\widetilde{\pi}( \phi | y )$ is located,
+and the Hessian is approximated, from which the grid is created and
+exploited in (\ref{eq:inla2}).  
+
+The output of INLA consists of
+posterior marginal distributions, which can be summarized via means,
+variances and quantiles. 
+
+Importantly for model comparison, the
+normalizing constant $p(y)$ is calculated. 
+
+## FTO: Linear model example
+
+We consider the a simple example in which the data
+consist of:
+\begin{itemize}
+\item $Y = $ weight 
+ \item $x_g = $ fto heterozygote $\in \{ 0,1 \}$
+\item  $x_a = $ age in weeks $\in \{1,2,3,4,5\}$ 
+ \end{itemize}
+ There are $n=20$ observations in total, corresponding to the weights at 5 ages, and at 2 levels of the FTO gene.
+
+We will examine the fit of the model 
+$$E[Y|x_g,x_a]=\beta_0 +\beta_g x_g + \beta_a x_a + \beta_{int} 
+x_g  x_a,$$
+with independent normal errors, 
+and compare with a Bayesian analysis.
+
+
+## FTO Example
+
+We read in the data and then carry out a  least squares analysis of the FTO data.
+
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50),fig.show='hide'}
+fto<-structure(list(y = c(2.14709237851534, 6.16728664844416, 6.5287427751799, 
+13.7905616042756, 13.6590155436307, 1.75906323176397, 6.77485810485697, 
+9.67664941025843, 11.751562703307, 12.3892232256873, 9.7235623369017, 
+12.1796864728229, 14.8575188389164, 16.370600225645, 27.7498618362862, 
+6.61013278196954, 11.3676194738021, 17.9876724213706, 22.4424423901962, 
+26.687802642435), X = structure(c(1, 1, 1, 1, 1, 1, 1, 1, 1, 
+1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 
+2, 3, 4, 5, 1, 2, 3, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 
+3, 4, 5, 1, 2, 3, 4, 5), .Dim = c(20L, 4L), .Dimnames = list(
+    NULL, c("", "xg", "xa", "")))), .Names = c("y", "X"))
+```
+## FTO Example
+
+\small
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50),fig.show='hide'}
+
+liny <- fto$y
+linxg <- fto$X[,"xg"]
+linxa <- fto$X[,"xa"]
+linxint <- fto$X[,"xg"]*fto$X[,"xa"]
+ftodf <- list(liny=liny,linxg=linxg,linxa=linxa,linxint=linxint)
+ols.fit <- lm(liny~linxg+linxa+linxint,data=ftodf)
+```
+
+## FTO Example
+
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50),fig.show='hide'}
+summary(ols.fit)
+
+```
+
+
+## INLA
+
+Load INLA, a non-standard package.
+
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50),fig.show='hide'}
+#install.packages("INLA", repos="http://www.math.ntnu.no/inla/R/stable")
+library(INLA)
+#
+# Data should be input to INLA as either a list or a dataframe
+#
+formula <- liny~linxg+linxa+linxint
+lin.mod <- inla(formula,data=ftodf,family="gaussian")
+
+```
+
+\small
+We might wonder, where are the priors?
+
+We didn't specify any...but INLA has default choices.
+
+
+## FTO example via INLA
+
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50),fig.show='hide'}
+names(lin.mod)
+```
+
+## FTO example via INLA
+
+The posterior means and standard deviations are in very close agreement with the OLS fits presented earlier.
+
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50),fig.show='hide'}
+coef(ols.fit)
+sqrt(diag(vcov(ols.fit)))
+lin.mod$summary.fixed
+```
+
+##  FTO example via INLA: Summary of fit
+
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50),fig.show='hide'}
+summary(lin.mod)
+```
+The posterior means and standard deviations are in very close agreement with the OLS fits presented earlier.
+
+
+
+
+\small
+
+
+## FTO Posterior marginals for fixed effects
+
+In general, plot(lin.mod) will give a set of plots of the marginal posterior densities, but this doesn't work in markdown! 
+
+So we construct by hand, for illustration we construct $p(\beta_g | y)$.
+
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50),fig.show="hide"}
+betag <- lin.mod$marginals.fixed$linxg
+betaa <- lin.mod$marginals.fixed$linxa
+par(mfrow=c(1,2))
+plot(inla.smarginal(betag), type="l",xlab="Regression coefficient for gene",ylab="Posterior density")
+plot(inla.smarginal(betaa), type="l",xlab="Regression coefficient for age",ylab="Posterior density")
+```
+
+## FTO Posterior marginals for $\beta_g$ and $\beta_a$.
+
+```{r, echo=TRUE, collapse=TRUE,fig.height=2.8,fig.width=4.5, tidy.opts=list(width.cutoff=50),echo=FALSE}
+betag <- lin.mod$marginals.fixed$linxg
+betaa <- lin.mod$marginals.fixed$linxa
+par(mfrow=c(1,2))
+plot(inla.smarginal(betag), type="l",xlab="Regression coefficient for gene",ylab="Posterior density")
+plot(inla.smarginal(betaa), type="l",xlab="Regression coefficient for age",ylab="Posterior density")
+```
+
+## FTO example via INLA
+
+In order to carry out model checking we rerun the analysis, but now 
+switch on a flag to obtain fitted values.
+
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50),fig.show='hide'}
+ lin.mod <- inla(liny~linxg+linxa+linxint,data=ftodf,
+      family="gaussian",control.predictor=list(compute=TRUE))
+fitted <- lin.mod$summary.fitted.values[,1]
+#
+# Now extract the posterior median of the measurement error sd
+sigmamed <- 1/sqrt(lin.mod$summary.hyperpar[,4]) 
+```
+
+## FTO: Residual analysis
+
+With the fitted values we can examine the fit of the model. In particular:
+
+- Normality of the errors (sample size is relatively small).
+
+- Errors have constant variance (and are uncorrelated).
+
+
+
+## FTO Residual analysis
+
+The code below forms residuals and then forms
+
+- a QQ plot to assess normality, 
+- a plot of residuals versus age, to assess linearity, 
+- a plot of residuals versus fitted values, to see if an unmodeled mean-variance relationship) and 
+- a plot of fitted versus observed for an overall assessment of fit.
+
+## FTO: Residual analysis
+
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50),fig.show='hide'}
+residuals <- (liny-fitted)/sigmamed
+par(mfrow=c(2,2))
+qqnorm(residuals,main="")
+abline(0,1,lty=2,col="red")
+plot(residuals~linxa,ylab="Residuals",xlab="Age")
+abline(h=0,lty=2,col="red")
+plot(residuals~fitted,ylab="Residuals",xlab="Fitted")
+abline(h=0,lty=2,col="red")
+plot(fitted~liny,xlab="Observed",ylab="Fitted")
+abline(0,1,lty=2,col="red")
+```
+
+\small
+The model assumptions do not appear to be greatly invalidated here.
+
+## 
+
+\scriptsize
+```{r, echo=TRUE, collapse=TRUE,fig.height=4.2,fig.width=4.5, tidy.opts=list(width.cutoff=50),echo=FALSE}
+residuals <- (liny-fitted)/sigmamed
+par(mfrow=c(2,2))
+qqnorm(residuals,main="")
+abline(0,1,lty=2,col="red")
+plot(residuals~linxa,ylab="Residuals",xlab="Age")
+abline(h=0,lty=2,col="red")
+plot(residuals~fitted,ylab="Residuals",xlab="Fitted")
+abline(h=0,lty=2,col="red")
+plot(fitted~liny,xlab="Observed",ylab="Fitted")
+abline(0,1,lty=2,col="red")
+```
+
+## A Simple ANOVA Example
+
+ We begin with simulated data from the simple one-way ANOVA model example:
+\begin{eqnarray*}
+Y_{ij} | \beta_0,b_i &=& \beta_0 + b_i + \epsilon_{ij}\\
+\epsilon_{ij} | \sigma^2_\epsilon &\sim_{iid}& \mbox{N}(0,\sigma^2_{\epsilon})\\
+b_i | \sigma_b^2 &\sim_{iid}& \mbox{N}(0,\sigma^2_b)
+\end{eqnarray*}
+$i=1,...,10;j=1,...,5$, with $\beta_0=0.5$, $\sigma_{\epsilon}^2=0.2^2$ and $\sigma_{b}^2=0.3^2$.
+
+$b_i$ are random effects and $\epsilon_{ij}$ are \textcolor{blue}{measurement errors} and there are two variances to estimate, $\sigma_{\epsilon}^2$ and $\sigma_{b}^2$.
+
+
+In a fixed effects Bayesian model, the variance $\sigma_{b}^2$ would be fixed in advance.
+
+## A Simple ANOVA Example
+
+Simulation is described and analyzed below. We fit the one-way ANOVA model and see reasonable recovery of the true values that were used to simulate the data.
+
+Not a big surprise, since we have fitted the model that was used to simulate the data!
+
+
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50),fig.show='hide'}
+set.seed(133)
+sigma.b <- 0.3
+sigma.e <- 0.2
+m <- 10
+ni <- 5
+beta0 <- 0.5
+b <- rnorm(m, mean=0, sd=sigma.b)
+e <- rnorm(m*ni, mean=0, sd=sigma.e)
+Yvec <- beta0 + rep(b, each=ni) + e
+simdata <- data.frame(y=Yvec, ind=rep(1:m, each=ni))
+anova.result <- inla(y ~ f(ind, model="iid"), data = simdata)
+sigma.est <- 1/sqrt(anova.result$summary.hyperpar[,4])
+sigma.est
+```
+
+\small
+``sigma.est`` gives the posterior medians of  $\sigma_\epsilon$ and $\sigma_b$, respectively.
+
+
+## A Simple ANOVA Example
+
+
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50),fig.show='hide'}
+anova.result$summary.fixed
+anova.result$summary.hyperpar
+```
+
+## Bayes logistic regression
+
+We consider case-control data for the disease Leber Hereditary
+  Optic Neuropathy (LHON) disease with genotype data for marker
+  rs6767450:
+
+\begin{center}
+\begin{tabular}{l|ccc|c}
+&CC&CT&TT&Total\\ 
+&$x=0$&$x=1$&$x=2$&\\ \hline
+Cases&6&8&75&89\\
+Controls&10&66&163&239\\ \hline
+Total&16&74&238&328
+\end{tabular}
+\end{center}
+
+Let $x=0,1,2$ represent the number of T alleles, and $p(x)$ the
+  probability of being a case, given $x$ copies of the $T$ allele.
+
+## Case control example
+
+We analyze the data using logistic regression models, first using likelihood methods.
+
+\small
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50)}
+x <- c(0,1,2)
+# Case data for CC CT TT
+y <- c(6,8,75)
+# Control data for CC CT TT
+z <- c(10,66,163)
+## Case control example
+```
+
+## Case control example
+
+We fit the logistic regression model as a generalized linear model and then examine the estimate and an asymptotic 95\% confidence interval.
+
+\small
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50)}
+logitmod <- glm(cbind(y,z)~x,family="binomial")
+thetahat <- logitmod$coeff[2]           # Log odds ratio
+thetahat
+exp(thetahat) # Odds ratio
+V <- vcov(logitmod)[2,2]                # standard error^2
+# Asymptotic confidence interval for odds ratio
+exp(thetahat-1.96*sqrt(V))
+exp(thetahat+1.96*sqrt(V))
+
+```
+
+
+## Case control example
+
+Now let's look at a likelihood ratio test of $H_0: \theta=0$ where $\theta$ is the log odds ratio associated with the genotype (multiplicative model).
+
+
+\scriptsize
+```{r, echo=TRUE, collapse=TRUE,fig.height=3.2,fig.width=3.5, tidy.opts=list(width.cutoff=50)}
+logitmod
+dev <- logitmod$null.deviance-logitmod$deviance
+dev
+pchisq(dev,df=logitmod$df.residual,lower.tail=F)
+
+```
+
+\small
+So just significant at the 5% level.
+
+
+
+## Bayes logistic regression
+
+We perform two analyses.
+
+The first Bayesian analysis uses the default priors in INLA (which are relatively flat).
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50),fig.show='hide'}
+x <- c(0,1,2)
+y <- c(6,8,75)
+z <- c(10,66,163)
+cc.dat <- as.data.frame(rbind(y,z,x))
+cc.mod <- inla(y~x,family="binomial",data=cc.dat,Ntrials=y+z)
+summary(cc.mod)
+
+```
+## Prior choice
+
+
+Suppose that for the odds ratio $\mbox{e}^{\beta}$ we believe there is a 50\% chance that the
+odds ratio is less than 1 and a 95\% chance that it is less than 5;
+with $q_1=0.5,\theta_1=1.0$ and $q_2=0.95,\theta_2=5.0$,
+we obtain lognormal parameters $\mu=0$ and $\sigma=(\log 5)/1.645=0.98$.
+
+There is a function in the ``SpatialEpi`` package to
+find the parameters, as we illustrate.
+
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50)}
+library(SpatialEpi)
+lnprior <- LogNormalPriorCh(1,5,0.5,0.95)
+lnprior
+```
+
+## Prior choice
+
+
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50),fig.height=3.2,fig.width=3.5}
+plot(seq(0,7,.1),dlnorm(seq(0,7,.1),meanlog=lnprior$mu,
+ sdlog=lnprior$sigma),type="l",xlab="x",ylab="LogNormal Density")
+```
+
+
+## Bayes logistic regression
+
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50),fig.show='hide'}
+# Now with informative priors
+W <- LogNormalPriorCh(1,1.5,0.5,0.975)$sigma^2
+cc.mod2 <- inla(y~x,family="binomial",data=cc.dat,Ntrials=y+z,
+   control.fixed=list(mean.intercept=c(0),prec.intercept=c(.1),
+                      mean=c(0),prec=c(1/W)))
+summary(cc.mod2)
+```
+The quantiles for $\theta$ can be translated to odds ratios by exponentiating.
+
+## Seascale
+
+In this example, we have just a single observation $y | \theta \sim \mbox{Poisson}(E \exp(\theta))$ with a N$(0,1.38^2)$ prior on $\theta$.
+
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50)}
+a <- 0
+b <- 1.38
+y <- 4
+Expect <- .25
+pdat <- list(y = y, E = Expect)
+mod.pois <- inla(y ~ 1, family='poisson', E=E, data=pdat,
+                 control.fixed=list(mean.intercept=a, prec.intercept=1/b^2))
+mod.pois$summary.fixed
+```
+
+This is inaccurate (and here no indication of failure).
+
+## Seascale
+
+Now with improved approximation.
+
+We also ask for the normalizing constant to be calculated.
+
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50)}
+a <- 0
+b <- 1.38
+y <- 4
+Expect <- .25
+pdat <- list(y = y, E = Expect)
+mod.pois2 <- inla(y ~ 1, family='poisson', E=E, data=pdat,
+                 control.compute=list(mlik=T),
+                 control.fixed=list(mean.intercept=a, prec.intercept=1/b^2),control.inla = list(strategy = "laplace"))
+```
+
+## Seascale
+
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50)}
+mod.pois2$summary.fixed
+mod.pois2$mlik
+# p(y)
+exp(mod.pois2$mlik[1,1])
+```
+
+## Seascale
+
+We illustrate the use of some special functions, to calculate quantities of interest (the variance, the others just recover what the summary gave us)
+
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50)}
+theta <- mod.pois2$marginals.fixed$`(Intercept)`
+m1 = inla.emarginal(function(x) x^1, theta)
+m2 = inla.emarginal(function(x) x^2, theta)
+vari <- m2 - m1^2
+vari
+stdev = sqrt(m2 - m1^2)
+stdev
+q = inla.qmarginal(c(0.025,0.975), theta)
+q
+```
+
+## Seascale: Posterior distribution of relative risk
+
+
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50),fig.height=3.2,fig.width=3.5}
+relrisk <- inla.tmarginal(function(x) exp(x), theta)
+inla.zmarginal(relrisk)
+```
+
+## Seascale: Posterior distribution of relative risk
+
+
+\scriptsize
+```{r, message=FALSE, collapse=TRUE, tidy=TRUE,tidy.opts=list(width.cutoff=50),fig.height=3.2,fig.width=3.5}
+plot(inla.smarginal(relrisk), type="l",xlab="Relative Risk",ylab="Posterior Density")
+```
+

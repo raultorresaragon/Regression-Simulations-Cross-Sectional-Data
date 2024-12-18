@@ -1,0 +1,661 @@
+---
+title: "<center> <h1>Homework 4</h1> </center>"
+author: "Raul Torres Aragon"
+date: "10/25/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(MASS)
+options(scipen=999)
+load('hw4_environment.RData')
+```
+
+## (1)  
+
+We want to illustrate how OLS estimation is affected by misspecification of the variance-covariance of the error terms.  
+Consider the simple linear regression model:  
+
+$$
+Y_i = \mu_i + \epsilon_i \\
+= \beta_0 + \beta_1(t_i-\bar{t}_i) + \epsilon_i
+$$  
+
+where $t_i$ represents time and the error terms $\epsilon_i$ are normal and are such that $E[\epsilon_i] = 0$, $i=1,...,n$. We assume $t_i$ is equally spaced in $(-2,2)$, $\beta_0=4$, $\beta_1=1.75$ and $\sigma^2=1$.  
+
+We specify three different forms for the variance-covariance:  
+
+* $var(\epsilon_i) = \mu_i\sigma^2$, and $cov(\epsilon_j,\epsilon_k)=0$ for $j\neq k$.  
+* $var(\epsilon_i) = \mu_i^2\sigma^2$, and $cov(\epsilon_j,\epsilon_k)=0$ for $j\neq k$.  
+* $var(\epsilon_i) = \sigma^2$, and $cov(\epsilon_j,\epsilon_k)=\sigma^2\rho^{|t_j - t_k|}$ with $-1<\rho<1$.  
+
+We now simulate from the above models and estimate $\beta_0$ and $\beta_1$ using OLS and values $\rho = 0.1, 0.5, 0.9$.  
+
+We first create a vector of $t$ values, and set constants $\beta_0=4, \beta_1=1.75$, and $\sigma^2=1$. We then construct the error terms as specified. Notice that the third model requires the construction of a multinormal vector of length $n$ where the variance is a matrix of the form:  
+
+$$
+var(\epsilon) = 
+\begin{bmatrix}  
+\sigma^2 & \delta\sigma^2 & \delta^2\sigma^2 & ... & \delta^{n-1}\sigma^2 \\
+\delta\sigma^2 & \sigma^2 & \delta\sigma^2 & ... & \delta^{n-2}\sigma^2 \\
+... \\
+\delta^{n-1}\sigma^2 & ... &   & ... & \sigma^2 \\
+\end{bmatrix}
+$$  
+where $\delta = \rho^{|t_i-t_k|}$.  
+
+```{r, echo = FALSE}
+knitr::kable(mytab)
+
+```  
+
+As we can see in the table above, for the first two models, when the variance-covariance of the error terms is misspecified the coverage gets better as the sample size goes up. The message here is that as long as the expectation of $\epsilon = 0$ and the $\epsilon$ terms are not correlated ($Cov(\epsilon_i, \epsilon_j)=0$) OLS will correctly estimate $Var(\epsilon)$ with the residuals. As n goes up, so does the estimate of the variance (which is reflected in better confidence intervals).  
+Now, for model 3, where $Cov(\epsilon_i, \epsilon_j)$ is not zero, we get good coverage when $\rho$ is close to zero In other words, when the correlation across error terms is minimal, out coverage is not bad. But then $Cov(\epsilon_i, \epsilon_j)$ is large, increasing n won't solve the problem. Take away message is that for OLS to be useful, the error terms better not be correlated.    
+
+## (2)  
+We now consider inference when the sampling model is multivariate hypergeometric. Suppose a population contains objects of K different types, with $X_1,...,X_K$ being the number of each type, $\sum_i^kX_k=N$. A simple random sample of size n is taken and the number of each type, $Y_1,...,Y_K$, is recorded (so that $\sum_i^ky_k=n$).  
+
+An obvious model for $Y_1,...,Y_k$, is the multivariate hypergeometric distribution:  
+$$
+Pr(Y_1=y_1,...,Y_k=y_k|x_1,...,x_k) = \frac{\prod_{k=1}^K{x_k \choose y_k}}{{N\choose n}}
+$$  
+
+with 
+$$
+E[Y_k|x_k] = n\frac{x_k}{N}
+$$  
+and 
+$$
+var(Y_k|x_k) = n\frac{x_k}{N}\bigg(1-\frac{x_k}{N}\bigg)\frac{N-n}{N-1}
+$$
+
+
+### (a) 
+We find that the estimator for $X_k$, method of moments, which simply takes the empirical moments as estimates for the distribution moments is:  
+
+$$
+\frac{1}{n}NE[Y_i|x_i] = x_k
+$$  
+$$
+\frac{1}{n}Ny_k = \hat{x}_k
+$$  
+
+We find the variance is:  
+
+$$
+Var(\hat{x}_k) = Var(\frac{1}{n}Ny_k) = \frac{N^2}{n^2}Var(y_k)  
+$$  
+And by the Law of Total Variance, $Var(y_k)$ is:
+$$
+\frac{N^2}{n^2}[E[Var(y_k|x_k)] + Var[E(y_k|x_k)]] =
+$$  
+$$
+\frac{N^2}{n^2}\bigg(E\bigg[n\frac{x_k}{N}\bigg(1-\frac{x_k}{N}\bigg)\frac{N-n}{N-1}\bigg] + \frac{n^2}{N^2}Var[x_k]\bigg)
+$$  
+solving for $y_k$ in $E[Y_k|x_k] = n\frac{x_k}{N}$, substituting, and recalling the tower property of variance yields:
+
+$$
+\frac{N^2}{n^2}y_k(1-\frac{y_k}{n})(\frac{N-n}{N-1}) + \frac{ny_k}{N}(1-\frac{y_k}{n})  
+$$  
+
+### (b)  
+We now consider a Bayesian approach with a multinomial distribution and a Dirichlet distribution. We first show that the Dirichlet distribution it the conjugate to the multinomial sampling model.  
+
+Recall Posterior $\propto$ Likelihood $\times$ Prior, so 
+
+$$
+P(\boldsymbol{p}|y) \propto L(\boldsymbol{p}) \times \pi(\boldsymbol{p})
+$$  
+where the Likelihood is the product of multinomial distributions for $X_1...X_k$ with parameters $p_1...p_k$ greater than zero and adding up to 1.  
+$$
+\propto \prod^n_1\frac{N!}{\prod^K_1x_k!}p_k^{x_k}
+$$  
+And the Prior distribution for the $p_k$ parameters is a Dirichlet distribution  
+$$
+\frac{\Gamma(\sum^K \alpha_k)}{\prod^K_1\Gamma(\alpha_1)}\prod^K_1p_k^{\alpha_k-1}
+$$
+
+$$
+\propto \frac{N!}{x_1!...x_k!}p_1^{x_1}...p_k^{x_k} \times \frac{1}{B(\boldsymbol{\alpha})}p_1^{\alpha_1-1}...p_k^{\alpha_k-1}  
+$$  
+Given that the constants $\frac{N!}{\prod^Kx_k!}$ and $\frac{\Gamma(\sum^K \alpha_k)}{\prod^K\Gamma(\alpha_1)}$ (which can be expressed as $\frac{1}{B(\alpha)}$) do not involve the parameter $p_k$ it can be ignored. Notice the product is a Dirichlet distribution with parameters ${x_k+\alpha_k}$  
+$$
+\propto p_1^{x_1+\alpha_1}...p_1^{x_k+\alpha_k}
+$$  
+## (c)  
+Now we show that the marginal distribution $p(\boldsymbol{y})$ is a compound multinomial distribution.  
+
+$$
+p(\boldsymbol{y}) = \int_{\boldsymbol{p}}P(\boldsymbol{y}|\boldsymbol{p})d\boldsymbol{p} = \int_{\boldsymbol{p}}P(\boldsymbol{y}|\boldsymbol{p})p(\boldsymbol{p})d\boldsymbol{p} = 
+\int_{\boldsymbol{p}}\prod^K_1[P(\boldsymbol{y}|\boldsymbol{p})]p(\boldsymbol{p})d\boldsymbol{p}
+$$  
+$$
+\frac{N!}{\prod^K_1x_k!}
+\frac{1}{B(\alpha)} 
+\int_{\boldsymbol{p}}\prod^N_1\prod^K_1[p_k^{x_i}]\prod^K_1p(\boldsymbol{p})d\boldsymbol{p} =
+$$  
+$$
+\prod^K_1\frac{N!}{\prod^K_1x_k!}\frac{1}{B(\alpha)}B(\boldsymbol{N\alpha})
+$$  
+when expanding the Beta function into Gammas, we get:  
+
+$$
+\frac{N!}{\prod^K_1x_k!}\frac{\Gamma(\sum^K_1 \alpha_i)}{\prod^K_1\Gamma(N +\alpha_1)} \prod^K_1\frac{\Gamma(x_k+\alpha_k)}{x_k!\Gamma(\alpha_k)}
+$$  
+which is the compound multinomial distribution.  
+
+## (d)  
+We now derive the expectation and the variance.  
+Recall the mean of a variable $X_k \sim \text{Dir}(\alpha)$ is  $\frac{\alpha_k}{\sum^K\alpha_k}$  
+and the variance is $\bigg(\frac{N+\sum^K\alpha_k}{1+\sum^Ka_k}\bigg)(p_k(1-\frac{p_k}{N})$  
+
+Similarly, for the multinomial distribution, we have $E[x_k] = Np_k$  
+and the variance $Np_k(1-p_k)$  
+
+For the compound multinomial we have
+By the tower property of expectation  
+$$
+E[X] = E[E(X_k|p_k)] = E[\text{Mult}(N_k,p_k)] = E[Np_k] = NE[p_k] = N\frac{\alpha_i}{\sum^K_1\alpha_i}
+$$  
+and for the variance, by the law of total variance, is:  
+$$
+Var(X_k) = E[Var(X_k|p_k)] + Var[E(X_k|p_k)] =
+$$  
+$$
+E[Var(\text{mult}(N_k,p_k))] + Var(E(\text{mult}(N_k,p_k))))
+$$
+$$
+E[Np_k(1-p_k))] + Var(Np_k) =
+$$
+
+Recall $E[Z^2] = Var(Z) + E(Z)^2$ by the Law of Total Variance, so
+
+$$
+NE(p_k) - N[Var(p_k)+E(p_k)^2] -N^2Var(p_k) = 
+$$  
+$$
+N\frac{\alpha_k}{\sum_i^K\alpha_i}\bigg(1-\frac{\alpha_k}{\sum_i^Ka_k}\bigg) + N(N-1)\frac{\alpha_k(\sum^K_i\alpha_i-\alpha_k)}{(\sum^K\alpha_i)^2(1+\sum_Ka_k)} =
+$$  
+$$
+\bigg(\frac{N(N+\sum_i^Ka_i)}{1+\sum_i^Ka_i}\bigg)
+\bigg(\frac{\alpha_i}{\sum_i^K \alpha_i}\bigg)
+\bigg(1-\frac{\alpha_i}{\sum^K_i\alpha_i}\bigg)
+$$  
+
+## (e)  
+
+Suppose we let $W_k = X_k-y_k$ as to represent the unobserved counts.
+The posterior distribution $P(w_1, ...e_k|y_1...y_k)$ is also compound multinomial $CMult(N-n, \boldsymbol{\alpha} + \boldsymbol{y})$.  
+
+$$
+P(\boldsymbol{W}=\boldsymbol{w}|\boldsymbol{y}) \propto P(\boldsymbol{y}|X=\boldsymbol{x})P(X_1=w_1+y_1...,X_k=w_k+y_k) = 
+$$  
+$$
+\frac{\prod_1^K {w_k+y_k \choose y_k}}{{N \choose n}} \frac{N!\Gamma(\sum_1^K\alpha_i)}{\Gamma(N+\sum_i^K\alpha_i)}\prod_1^K\frac{\Gamma(w_k+y_k+\alpha_k)}{(w_k+y_k)!\Gamma(\alpha_k)} =
+$$  
+$$
+n!(N-n)!\frac{\Gamma(\sum_1^K\alpha)}{\Gamma(N + \sum_1^K \alpha_i)}\prod_1^K\frac{\Gamma(w_k+y_k+\alpha_k)}{(w_k+y_k)!\Gamma(\alpha_k)} 
+$$  
+$$
+\propto \prod_1^K\frac{\Gamma(w_k+y_k+\alpha_k)}{(w_k+y_k)!\Gamma(\alpha_k)}
+$$  
+$$
+\propto \frac{(N-n)!\Gamma(\sum_i^K\alpha_i + y_k)}{\Gamma(N-n+\sum_1^K \alpha_i + y_k)} 
+\prod_1^K\frac{\Gamma(w_k+y_k+\alpha_k)}{(w_k+y_k)!\Gamma(\alpha_k)}
+$$  
+$$
+w_k \sim CMult(N-n, y+\alpha)
+$$
+
+
+## (f)  
+We also find the posterior mean and posterior variance of $x_k$. 
+Recall that we showed in (b) that the product of the Likelikhood and the Prior is a compound Dirichlet distribution. Given that we showed in (d) the mean and variance of the prodcut of multionomial and Dirichlet, we can use that to derive the mean and variance of the posterior.  
+
+Recall the posterior is Dirichlet with parameters $(a_k + x_k)$.  
+Then the mean is  
+$$
+E[X_k] = \frac{N(\alpha_k + x_k)}{\sum_i^K\sum_i^N(\alpha_i + x_i)}
+$$  
+and the variance is:  
+
+$$
+Var(x_k) = 
+\bigg(\frac{N(N+\sum_i^K(a_i + x_i)}{1+\sum_i^K(a_i+x_i)}\bigg)
+\bigg(\frac{(\alpha_i + x_k)}{\sum_i^K (\alpha_i + x_i)}\bigg)
+\bigg(1-\frac{(\alpha_k + x_k)}{\sum^K_i(\alpha_i+x_i)}\bigg)
+$$
+
+Notice the case when $\alpha_k = 0$ for al k. This collapses to a Dirichlet distribution with only the frequencies of each category, and the mean would be the Method of Moments mean. 
+  
+  
+A certain infectious disease can be caused by one of three different pathogens, A, B, or C. Over a 1 year period population surveillance is carried out, and 750 individuals are observed to be infected. A random sample of 65 cases is selected for lab testing, i.e., to determine the pathogen responsible. Of these 65 selected cases, the numbers who were infected by pathogens A, B, C, were 44, 21, 0, respectively.  
+
+We wish to estimate the numbers of the total population of cases that were infected by each of the pathogens.  
+
+## (g)  
+We first compute the method of moments according to our calculations above
+
+```{r , echo=FALSE}
+N <- 750
+n <- 65
+A <- 44; B <- 21; C <- 0
+
+mom <- function(N, n, cases) {
+  mean <- (N/n)*cases
+  var <- ((N^2 / n^2) * cases *((1 - (cases/n)) * (N-n)/(N-1))) + (n*cases)/N * (1-(cases/n))
+  return(list("mean" = mean, "var" = var, "se" = sqrt(var)))
+}
+
+mytab <- tibble::tibble("pathogen" = character(), "mean_mom" = numeric(), "var_mom" = numeric())
+for(p in c(A,B,C)) {
+  
+  if(p==A) path = "A"
+  if(p==B) path = "B"
+  if(p==C) path = "C"
+  res <- mom(N=N, n=n, cases=p)
+  mytab <- mytab |> dplyr::add_row("pathogen" = path, 
+                                   "mean_mom" = round(res$mean,1), 
+                                   "var_mom" = round(res$se,2))
+}
+
+knitr::kable(mytab)
+```
+
+
+## (h)  
+We now compute the Bayes estimates  
+
+```{r, echo = FALSE}
+
+bayes <- function(N, n, cases, A=44, B=21, C=0, a = 1) {
+  mean <- (N*( a + cases)) / ((a+A) + (a+B) + (a+C))
+  sumK <- (a+A)+(a+B)+(a+C)
+  var <- N*(N+sumK)/(1+sumK) * (a+cases)/sumK * (1-(a+cases)/sumK)
+  return(list("mean" = mean, "var" = var, "se" = sqrt(var)))
+}
+
+mytab_bayes <- tibble::tibble("pathogen" = character(), 
+                              "mean_bayes" = numeric(), 
+                              "var_bayes" = numeric())
+for(p in c(A,B,C)) {
+  
+  if(p==A) path = "A"
+  if(p==B) path = "B"
+  if(p==C) path = "C"
+  res <- bayes(N=N, n=n, cases=p)
+  mytab_bayes <- mytab_bayes |> dplyr::add_row("pathogen" = path, 
+                                               "mean_bayes" = round(res$mean,1), 
+                                               "var_bayes" = round(res$se,2))
+}
+
+knitr::kable(mytab_bayes)
+
+```
+
+It seems like the estimates from the Bayes seem better because even when C=0 it estimates some count based on our priors. In other words, in the lack of data, our priors fill in. This can be useful because that way we have expected count of C cases. At the same time, notice that the SE_bayes allows for the possibility of that count being zero.  
+It's a double edge sword because of the prior alpha is 5, the expected count for C is 46 and the SE 21. Use with caution, meaning ensure the priors are reasonable.  
+  
+## (i)  
+Taking advantage of conjugacy, we can use direct sampling using the rejection algorithm.  
+Recall the MLE of a set of multinomial random variables is the proportion of the category in question among the set of X_i multinomial draws. 
+
+$$
+\hat{p}_k = \frac{x_k}{n}
+$$  
+
+Thus the MLE (44/65, 21/65, 0/65) are the maximizers of the Likelihood function, hence 
+
+$$
+sup(L(\boldsymbol{p})) = 0.105
+$$  
+
+The probability that a point is accepted as a sample from the posterior is  
+$$
+P(accept) = \frac{\int p(y|\boldsymbol{p})p(\boldsymbol{p})d\boldsymbol{p}}{sup} = \frac{p(\boldsymbol{y})}{sup}
+$$
+
+```{r, echo = FALSE}
+N <- 750
+
+MLEs <- c(44/65, 21/65, 0/65)
+
+Sup <- dmultinom(c(44, 21, 0), prob =c(44/65, 21/65, 0/65))
+
+prob <- function(p) {
+  dmultinom(x = c(44, 21, 0), prob = p)
+}
+
+i <- 1
+nsim <- 1e3
+samps <- matrix(0, nrow=nsim, ncol=3)
+
+while(i <= nsim) {
+  
+  U <- runif(n=1, min=0, max=1)
+  P <- gtools::rdirichlet(1, alpha = c(1,1,1)) |> as.vector()
+  
+  if(U < (prob(P)/Sup)) {
+    
+    samps[i, ] <- rmultinom(1, size = N, prob = P)
+    i <- i + 1
+  }
+  
+}
+
+A <- samps[, 1]
+B <- samps[, 2]
+C <- samps[, 3]
+
+par(mfrow = c(1,3))
+
+sumstats_A <- list("mean" = mean(A), "sd" = sd(A))
+sumstats_B <- list("mean" = mean(B), "sd" = sd(B))
+sumstats_C <- list("mean" = mean(C), "sd" = sd(C))
+
+hist(A, main = "Posterior samples of A", xlab = paste0("mean=", round(sumstats_A$mean,1), "\nsd=", round(sumstats_A$sd,1)))
+hist(B, main = "Posterior samples of B", xlab = paste0("mean=", round(sumstats_B$mean,1), "\nsd=", round(sumstats_B$sd,1)))
+hist(C, main = "Posterior samples of C", xlab = paste0("mean=", round(sumstats_C$mean,1), "\nsd=", round(sumstats_C$sd,1)))
+
+
+```  
+
+## Appendix 
+
+```{}
+# Student: Raul
+# Course: STAT 570
+# Assignment: hw4
+# Date: 2022-10-25
+#------------------------------------------# 
+
+# QUESTION 1 #
+# -----------#
+rm(list = ls())
+set.seed(570)
+ns <- 10 # c(5,10,20,30,40,50)
+rhos <- 0.5 # c(0.1, 0.5, 0.9)
+b0 <- 4
+b1 <- 1.75
+sigma2 <- 1
+
+# proof of concept
+t <- letters[1:5]
+expand.grid(t(t), t) -> d
+tjtk <- stringr::str_c(d$Var1, d$Var2)
+V <- matrix(tjtk, nrow=5,ncol=5)
+for(row in 1:5) {
+  for(col in 1:5){
+    if(row==col) { V[row,col] <- paste0(V[row,col],"^",0) }
+    if(row!=col) { V[row,col] <- paste0(V[row,col],"^",max(row,col)-1)}
+  }
+}
+V
+rm(list = c("t","d","V","tjtk"))
+
+
+# run model
+run_model <- function(b0=4, b1=1.75, sigma2=1, n, rho, use_sigma2_hat=FALSE) {
+  
+  t <- seq(-2, 2, length.out = n)
+  t_star <- t - mean(t)
+  X <- cbind(1, t_star)
+  Mu<- mean(b0 + b1*(t_star)) #<-mean
+  
+  results <- list("m1" = NA, "m2" = NA, "m3" = NA)
+  for(type in 1:3) {
+    if(type==1) { e <- rnorm(n=n, mean=0, sqrt(Mu*sigma2)) }
+    if(type==2) { e <- rnorm(n=n, mean=0, sqrt(Mu^2*sigma2)) }
+    if(type==3) { 
+      expand.grid(t(t), t) -> d; rho^abs(d$Var1 - d$Var2) -> deltas
+      V <- matrix(deltas, nrow = n, ncol = n)
+      for(row in 1:n) {
+        for(col in 1:n){
+          if(row==col) {
+            V[row,col] <- V[row,col]^0 
+          } else{ 
+            V[row,col] <- V[row,col]^(max(row,col)-1) 
+          }
+        }
+      }
+      e <- mgcv::rmvn(n=1, mu = rep(0,n), V=V)
+    }
+    
+    Y <- b0 + b1*(t_star) + e
+     
+    if(type==1) { vcovar <- Mu*sigma2 * solve(t(X)%*%X) }
+    if(type==2) { vcovar <- Mu^2*sigma2 * solve(t(X)%*%X) }
+    if(type==3) {
+      vcovar <- sigma2 * solve(t(X)%*%X)
+      vcovar[1,2] <- vcovar[2,1] <- sigma2*rho^sum(abs(1-t)) #<-sum???
+    }
+    betas <- solve(t(X)%*%X)%*%t(X)%*%Y
+    
+    # rss/dfreed is an unbiased estimator for var(e)
+    # do we compute C.I. with rss/dfreed or with the known var(e)?
+    if(use_sigma2_hat == TRUE) {
+      #print("using rss/dfreed to estimate the error variance")
+      sigma2_hat <- sum((Y -(X %*% betas))^2) / (nrow(X) - ncol(X))
+      vcov_hat <- sigma2_hat * solve(t(X)%*%X)
+      vcovar <- vcov_hat
+    }
+    
+    c_i_b0 <- c(betas[1] - 1.96 * sqrt(vcovar[1,1]),
+                betas[1] + 1.96 * sqrt(vcovar[1,1]))
+    c_i_b1 <- c(betas[2] - 1.96 * sqrt(vcovar[2,2]),
+                betas[2] + 1.96 * sqrt(vcovar[2,2]))    
+    results[[type]] <- list("c_i_b0" = c_i_b0, 
+                            "c_i_b1" = c_i_b1,
+                            "betas" = betas,
+                            "vcovar" = vcovar)
+  }
+  return(results)
+}
+
+
+simulate <- function(N, n, rho) {
+
+   coverage_m1_b0 <- vector(mode = "numeric", length = N)
+   coverage_m1_b1 <- vector(mode = "numeric", length = N)
+   coverage_m2_b0 <- vector(mode = "numeric", length = N)
+   coverage_m2_b1 <- vector(mode = "numeric", length = N)
+   coverage_m3_b0 <- vector(mode = "numeric", length = N)
+   coverage_m3_b1 <- vector(mode = "numeric", length = N)
+   
+   for(s in 1:N) {
+     
+     r <- run_model(n=n, rho=rho, use_sigma2_hat = TRUE)
+     
+     if(r$m1$c_i_b0[1] < b0 & b0 < r$m1$c_i_b0[2]) {
+       coverage_m1_b0[s] <- 1
+     }  else { coverage_m1_b0[s] <- 0}
+     if(r$m1$c_i_b1[1] < b1 & b1 < r$m1$c_i_b1[2]) {
+       coverage_m1_b1[s] <- 1
+     }  else { coverage_m1_b1[s] <- 0}
+     
+     
+     if(r$m2$c_i_b0[1] < b0 & b0 < r$m2$c_i_b0[2]) {
+       coverage_m2_b0[s] <- 1
+     }  else { coverage_m2_b0[s] }
+     if(r$m2$c_i_b1[1] < b1 & b1 < r$m2$c_i_b1[2]) {
+       coverage_m2_b1[s] <- 1
+     }  else { coverage_m2_b1[s] <- 0}
+     
+     
+     if(r$m3$c_i_b0[1] < b0 & b0 < r$m3$c_i_b0[2]) {
+       coverage_m3_b0[s] <- 1
+     }  else { coverage_m3_b0[s] <- 0}
+     if(r$m3$c_i_b1[1] < b1 & b1 < r$m3$c_i_b1[2]) {
+       coverage_m3_b1[s] <- 1
+     }  else { coverage_m3_b1[s] <- 0}
+   }
+  
+  return(list(
+    "coverage_m1_b0" = coverage_m1_b0 |> mean(),
+    "coverage_m1_b1" = coverage_m1_b1 |> mean(),
+  
+    "coverage_m2_b0" = coverage_m2_b0 |> mean(),
+    "coverage_m2_b1" = coverage_m2_b1 |> mean(),
+  
+    "coverage_m3_b0" = coverage_m3_b0 |> mean(),
+    "coverage_m3_b1" = coverage_m3_b1 |> mean()  
+  ))
+}
+mytab <- tibble::tibble("rho" = numeric(),
+                        "n"   = numeric(),
+                        "beta" = character(),
+                        "coverage_m1" = numeric(),
+                        "coverage_m2" = numeric(),
+                        "coverage_m3" = numeric())
+for(r in rhos) {
+  for(n in ns) {
+    s <- simulate(N=1e2, n=n, rho=r)
+    mytab <- mytab |>
+      dplyr::add_row("rho"=r, "n"=n, "beta"="b0", 
+            "coverage_m1"=s$coverage_m1_b0,
+            "coverage_m2"=s$coverage_m2_b0,
+            "coverage_m3"=s$coverage_m3_b0) |>
+      dplyr::add_row("n"=n, "rho"=r, "beta"="b1", 
+            "coverage_m1"=s$coverage_m1_b1,
+            "coverage_m2"=s$coverage_m2_b1,
+            "coverage_m3"=s$coverage_m3_b1)
+  }
+}
+
+## QUESTION 2
+
+# method of moments
+# -----------------
+
+N <- 750
+n <- 65
+A <- 44; B <- 21; C <- 0
+
+mom <- function(N, n, cases) {
+  mean <- (N/n)*cases
+  var <- ((N^2 / n^2) * cases *((1 - (cases/n)) * (N-n)/(N-1))) + (n*cases)/N * (1-(cases/n))
+  return(list("mean" = mean, "var" = var, "se" = sqrt(var)))
+}
+
+mytab <- tibble::tibble("pathogen" = character(), "mean_mom" = numeric(), "var_mom" = numeric())
+for(p in c(A,B,C)) {
+  
+  if(p==A) path = "A"
+  if(p==B) path = "B"
+  if(p==C) path = "C"
+  res <- mom(N=N, n=n, cases=p)
+  mytab <- mytab |> dplyr::add_row("pathogen" = path, 
+                                   "mean_mom" = round(res$mean,1), 
+                                   "var_mom" = round(res$se,2))
+}
+
+knitr::kable(mytab)
+
+## Bayes
+#-------
+
+bayes <- function(N, n, cases, A=44, B=21, C=0, a = 1) {
+  mean <- (N*( a + cases)) / ((a+A) + (a+B) + (a+C))
+  sumK <- (a+A)+(a+B)+(a+C)
+  var <- N*(N+sumK)/(1+sumK) * (a+cases)/sumK * (1-(a+cases)/sumK)
+  return(list("mean" = mean, "var" = var, "se" = sqrt(var)))
+}
+
+mytab_bayes <- tibble::tibble("pathogen" = character(), 
+                              "mean_bayes" = numeric(), 
+                              "var_bayes" = numeric())
+for(p in c(A,B,C)) {
+  
+  if(p==A) path = "A"
+  if(p==B) path = "B"
+  if(p==C) path = "C"
+  res <- bayes(N=N, n=n, cases=p)
+  mytab_bayes <- mytab_bayes |> dplyr::add_row("pathogen" = path, 
+                                               "mean_bayes" = round(res$mean,1), 
+                                               "var_bayes" = round(res$se,2))
+}
+
+knitr::kable(mytab_bayes)
+
+
+## Rejection algorithm
+#---------------------
+
+N <- 750
+
+MLEs <- c(44/65, 21/65, 0/65)
+
+Sup <- dmultinom(c(44, 21, 0), prob =c(44/65, 21/65, 0/65))
+
+prob <- function(p) {
+  dmultinom(x = c(44, 21, 0), prob = p)
+}
+
+i <- 1
+nsim <- 1e3
+samps <- matrix(0, nrow=nsim, ncol=3)
+
+while(i <= nsim) {
+  
+  U <- runif(n=1, min=0, max=1)
+  P <- gtools::rdirichlet(1, alpha = c(1,1,1)) |> as.vector()
+  
+  if(U < (prob(P)/Sup)) {
+    
+    samps[i, ] <- rmultinom(1, size = N, prob = P)
+    i <- i + 1
+  }
+  
+}
+
+A <- samps[, 1]
+B <- samps[, 2]
+C <- samps[, 3]
+
+par(mfrow = c(1,3))
+
+sumstats_A <- list("mean" = mean(A), "sd" = sd(A))
+sumstats_B <- list("mean" = mean(B), "sd" = sd(B))
+sumstats_C <- list("mean" = mean(C), "sd" = sd(C))
+
+hist(A, main = "Posterior samples of A", xlab = paste0("mean=", round(sumstats_A$mean,1), "\nsd=", round(sumstats_A$sd,1)))
+hist(B, main = "Posterior samples of B", xlab = paste0("mean=", round(sumstats_B$mean,1), "\nsd=", round(sumstats_B$sd,1)))
+hist(C, main = "Posterior samples of C", xlab = paste0("mean=", round(sumstats_C$mean,1), "\nsd=", round(sumstats_C$sd,1)))
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,212 @@
+---
+title: "Final"
+author: "Raul Torres Aragon"
+date: "2022-12-05"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(scipen=999)
+load("final_objects.RData")
+```
+
+
+Consider the cycle to pregnancy data in Table 1. These data are from a study described in 
+Baird and Wilcox (1985) in which women with planned pregnancies were interviewed and asked 
+how many cycles it took them to get pregnant. Women were classified as current smokers if 
+they reported smoking at least an average of 1 cigarette a day during the first cycle they 
+were trying to get pregnant.  
+
+```{r, echo=FALSE, fig.align = 'center', out.width="65%"}
+knitr::include_graphics("table1.png")
+```
+
+We will begin by describing a model for a single group only.  
+
+1. We describe a simple model for these data. Let p (0 < p < 1) denote the probability of 
+conception during a particular cycle, and T the random variable describing the cycle at 
+which pregnancy was achieved. Then T may be modeled as a geometric random variable:  
+
+```{r, echo=FALSE, fig.align = 'center', out.width="39%"}
+knitr::include_graphics("Eq1.png")
+```  
+Let $Y_t$ represent the number of women that conceive in cycle $t$, $t = 1,\dots,N$, and 
+$Y_{N+1}$ the number of women that have not conceived by cycle N.  
+
+## (a)  
+Show that the likelihood function is,  
+$$
+L(p) = \bigg (\prod_{T=1}^N [p(1-p)^{t-1}]^{Y_t}\bigg) \times [(1-p)^N]^{Y_{N+1}}
+$$  
+There are $Y_1$ women who conceived in $t=1$. Assuming independence, the likelihood of that 
+happening is  
+$$
+\underbrace{p(1-p)^{1-1}}_1 \times \underbrace{p(1-p)^{1-1}}_2 \times \dots \times \underbrace{ p(1-p)^{1-1}}_{Y_1} = 
+[p(1-p)^{1-1}]^{Y_1}
+$$  
+Similarly, there are $Y_2$ women who conceived in $t=2$. Again, assuming independence, the 
+likelihood of that happening is  
+$$
+\underbrace{p(1-p)^{2-1}}_1 \times \underbrace{p(1-p)^{2-1}}_2 \times \dots \times \underbrace{p(1-p)^{2-1}}_{Y_2} = 
+[p(1-p)^{2-1}]^{Y_2}
+$$  
+We proceed similarly until $Y_N$, the number of women who conveiced in time period $t=N$.  
+$$
+\underbrace{p(1-p)^{N-1}}_1 \times \underbrace{p(1-p)^{N-1}}_2 \times \dots \times \underbrace{ p(1-p)^{N-1}}_{Y_N} = 
+[p(1-p)^{N-1}]^{Y_N}
+$$  
+Hence, the likelihood of the women who conceived between time periods $t=1$ and $t=N$ is  
+$$
+\bigg (\prod_{T=1}^N [p(1-p)^{t-1}]^{Y_t}\bigg)
+$$  
+Now, for the $Y_{N+1}$ women who did not conceive at all in the $N$ time periods. The 
+likelihood of that happening is  
+$$
+\underbrace{(1-p)^N}_1 \times \underbrace{(1-p)^N}_2 \times \dots \times \underbrace{(1-p)^N}_{Y_{N+1}} = 
+[(1-p)^N]^{Y_{N+1}}
+$$  
+Hence, the likelihood function we're after is  
+$$
+L(p) = \bigg (\prod_{T=1}^N [p(1-p)^{t-1}]^{Y_t}\bigg) \times [(1-p)^N]^{Y_{N+1}}
+$$  
+
+## (b)  
+Find the expression for the MLE, $\hat{p}$.  
+
+To find $\hat{p}_{MLE}$, we first obtain the log-likelihood, derive with respect to $p$, 
+set equal to zero, and solve for $p$. We now show the log-likelihood function:  
+
+$$
+\begin{aligned}
+l(p) &= \log[L(p)] \\   
+&= \log\bigg[ \bigg (\prod_{T=1}^N [p(1-p)^{t-1}]^{Y_t}\bigg) \times [(1-p)^N]^{Y_{N+1}} \bigg] \\
+&= \log \bigg( [p(1-p)^{1-1}]^{Y_1} \dots [p(1-p)^{N-1}]^{Y_N} \bigg) + \log\bigg( [(1-p)^N]^{Y_{N+1}} \bigg) \\
+&= Y_1(1-1)\log[p(1-p)] + \dots Y_N(N-1)\log[p(1-p)] + NY_{N+1}\log(1-p) \\
+&= \log[p(1-p)]\underbrace{\sum_{t=1}^NY_t(t-1)}_{K_1} + \underbrace{NY_{N+1}}_{K_2}\log(1-p)
+\end{aligned}
+$$  
+Taking the derivative with respect to p, we get:  
+$$
+\frac{\partial l(p)}{p} = K_1\frac{1}{p(1-p)} - K_1\frac{2}{(1-p)}-K_2\frac{1}{1-p}
+$$  
+Setting $\frac{\partial l(p)}{p}$ to zero and solving for p to obtain the MLE estimate for 
+$p$, aka $\hat{p}$:  
+
+$$
+\begin{aligned}
+S(\hat{p}) &= \frac{\partial l(p)}{p} := 0 \\
+&\implies \frac{K_1-2\hat{p}K_1-\hat{p}K_2}{\hat{p}(1-\hat{p})}=0 \\
+&\implies -\hat{p}(2K_1+K_2) = -K_1 \\
+&\implies \hat{p} = \frac{K_1}{2K_1 + K_2} \\
+&\implies \hat{p} = \frac{\sum_{t=1}^NY_t(t-1)}{2\sum_{t=1}^NY_t(t-1) + NY_{N+1}}
+\end{aligned}
+$$  
+
+## (c)  
+Find the form of the observed information and hence the asymptotic variance of the MLE.  
+
+To get the *theoretical* information, we take the expectation of the second-derivative (with 
+respect to $p$) of the log-likelihood with respect to T, the random variable of interest.  
+
+$$
+\begin{aligned}
+\mathcal{I}_p &= -E\bigg[ \frac{\partial^2 l(p)}{p^2} \bigg] \\
+&= -E\bigg[ -\frac{K_1}{p^2} -\frac{(K_1+K_2)}{(1-p)^2} \bigg] \\
+&= E\bigg[ \frac{K_1}{p^2} +\frac{(K_1+K_2)}{(1-p)^2} \bigg] \\
+&= E\bigg[ \frac{\sum_{t=1}^NY_t(t-1)}{p^2} \bigg] + E\bigg[ \frac{NY_{N+1} + \sum_{t=1}^NY_t(t-1)}{(1-p)^2}\bigg] \\
+&= \frac{1}{p^2}\bigg[ Y_1E(t_1-1) + \dots Y_NE(t_N-1)\bigg] +  
+   \frac{1}{(1-p)^2} \bigg[ Y_1E(t_1-1) + \dots Y_NE(t_N-1) + E(NT_{N+1}) \bigg] \\
+&= \frac{1}{p^2}\bigg[ Y_1E(t_1) - Y_1E(1) + \dots Y_NE(t_N) - Y_NE(1)\bigg] + 
+   \frac{1}{(1-p)^2} \bigg[ Y_1E(t_1) -Y_1E(1) + \dots Y_NE(t_N)-Y_NE(1) + 0 \bigg] \\
+\end{aligned}
+$$  
+
+
+And because we assume independence and identical distribution of $T_t$, knowing that the 
+$E(T_t) = 1/p$ because $T_N\sim \text{Geometric}(p)$,  
+$$
+\begin{aligned}
+&= \frac{1}{p^2}\bigg[ Y_1\frac{1}{p} + \dots Y_N\frac{1}{p} \bigg] + 
+   \frac{1}{(1-p)^2} \bigg[ Y_1\frac{1}{p} + \dots Y_N\frac{1}{p} \bigg] \\
+&= \frac{1}{p^3}\sum_{T=1}^NY_N + \frac{1}{p(1-p)^2}\sum_{T=1}^NY_N \\
+&= \bigg(\frac{1}{p^3} + \frac{1}{p(1-p)^2}\bigg)\sum_{T=1}^NY_N
+\end{aligned}
+$$  
+Thus the observed Information for these data is `r round(I,1)`.  
+The asymptotic variance is the inverse of the information. In this case `r formatC(var, format="f", digits=6)`.  
+
+## (d)  
+For the data in Table 1, calculate the MLEs $\hat{p}_1$ (smokers) and $\hat{p}_2$ (non-
+smokers), the variance of $\hat{p}_j$, and asymptotic 95% confidence intervals for $\hat{p}$,
+$j = 1,2$.  
+
+The form of the 1-$\alpha$% confidence interval is  
+$$
+\begin{aligned}
+\bigg[ \hat{p} \pm \Phi(1-\alpha/2)\times\sqrt{\mathcal{I}^{-1}/n}\bigg] \\
+\end{aligned}
+$$  
+Hence, for smokers it is `r round(ci_smokers,3)`, and for non-smokers it is 
+`r round(ci_nonsmokers,3)`.  
+This suggests that the probability of conceiving on a given time-period is slightly smaller 
+for smokers than for non-smokers. 
+
+## (e)  
+We now consider a Bayesian analysis for a single group. The conjugate prior for $p$ is a 
+beta distribution, $Be(a,b)$. State the form of the posterior with this choice. 
+Give the form of the posterior mean and write as a weighted combination of the MLE and the prior mean.  
+
+By Bayes Rule, the posterior distribution is  
+$$
+\begin{aligned}
+P(p|\text{data}) &= \frac{P(\text{data}|p) \times P(p)}{P(\text{data})} \\
+&\propto P(\text{data}|p) \times P(p) \\
+&\propto L(p)\times P(p) \\
+&\propto \bigg (\prod_{T=1}^N [p(1-p)^{t-1}]^{Y_t}\bigg) \times [(1-p)^N]^{Y_{N+1}} \times 
+         p^{\alpha-1}(1-p)^{\beta -1} \\
+&\propto \bigg[ p^{\sum_{t=1}^N Y_t} (1-p)^{NY_{N+1} + \sum_{t=1}^NY_t(t-1)} \bigg] \times 
+         p^{\alpha-1}(1-p)^{\beta -1} \\
+&\propto p^{\sum_{t=1}^N Y_t+\alpha - 1} \times (1-p)^{NY_{N+1} + \sum_{t=1}^NY_t(t-1) + \beta -1}
+\end{aligned}
+$$  
+ignoring the Beta constant since we're stating proportionality.  
+
+Notice the likelihood-prior product is Beta-looking with $\alpha^*=\sum_{t=1}^N Y_t+\alpha$ and 
+$\beta^*=NY_{N+1} + \sum_{t=1}^NY_t(t-1) + \beta$. Hence we can normalize this by multiplying 
+by the Beta normalizing function  
+
+$$
+\frac{\Gamma[\sum_{t=1}^N \{Y_t\}+\alpha + NY_{N+1} + \sum_{t=1}^N\{Y_t(t-1)\} + \beta]}
+     {\Gamma[\sum_{t=1}^N \{Y_t\}+\alpha]\Gamma[NY_{N+1} + \sum_{t=1}^N\{Y_t(t-1)\} + \beta]}
+$$  
+
+and yielding the posterior distribution  
+$$
+\frac{\Gamma[\sum_{t=1}^N \{Y_t\}+\alpha + NY_{N+1} + \sum_{t=1}^N\{Y_t(t-1)\} + \beta]}
+     {\Gamma[\sum_{t=1}^N \{Y_t\}+\alpha]\Gamma[NY_{N+1} + \sum_{t=1}^N\{Y_t(t-1)\} + \beta]}
+     p^{\sum_{t=1}^N \{Y_t\}+\alpha - 1} \times (1-p)^{NY_{N+1} + \sum_{t=1}^N\{Y_t(t-1)\} + \beta -1}
+$$  
+
+The posterior is then  
+$$
+\frac{\alpha^*}{\alpha^* + \beta^*} = 
+\frac{\sum_{t=1}^N \{Y_t\}+\alpha}{\sum_{t=1}^N \{Y_t\}+\alpha + NY_{N+1} + \sum_{t=1}^N\{Y_t(t-1)\} + \beta}
+$$  
+
+Recall $\hat{p} = \frac{\sum_{t=1}^NY_t(t-1)}{2\sum_{t=1}^NY_t(t-1) + NY_{N+1}}$, thus 
+we can write the posterior mean as a weighted combination of $\hat{p}$ and the prior mean.  
+
+
+
+
+
+
+
+
+
+
+
+
